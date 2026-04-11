@@ -1,9 +1,61 @@
 import { motion, AnimatePresence } from "motion/react";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef } from "react";
+import Hls from "hls.js";
 import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink } from "lucide-react";
 import { cn } from "../lib/utils";
 import { siteConfig } from "../data";
 import { useInView } from "react-intersection-observer";
+
+// ---------------------------------------------------------------------------
+// HlsVideo – a drop-in <video> replacement with hls.js support
+// ---------------------------------------------------------------------------
+interface HlsVideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
+  src: string;
+}
+
+const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
+  { src, ...rest },
+  ref
+) {
+  const internalRef = useRef<HTMLVideoElement>(null);
+  const videoRef = (ref as React.RefObject<HTMLVideoElement>) ?? internalRef;
+  const hlsRef = useRef<Hls | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !src) return;
+
+    // Clean up previous instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    if (src.endsWith(".m3u8")) {
+      if (Hls.isSupported()) {
+        const hls = new Hls({ startLevel: -1 });
+        hlsRef.current = hls;
+        hls.loadSource(src);
+        hls.attachMedia(video);
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // Safari native HLS
+        video.src = src;
+      }
+    } else {
+      video.src = src;
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [src]);
+
+  return <video ref={videoRef} {...rest} />;
+});
+
 
 export function useGlobalPauseState() {
   const [isPaused, setIsPaused] = useState(false);
@@ -272,8 +324,9 @@ export function Hero() {
 
   return (
     <section id="hero" className="relative h-screen w-full overflow-hidden flex flex-col items-center justify-center bg-[#2D2926]">
-      <video
+      <HlsVideo
         ref={videoRef}
+        src={siteConfig.hero.video}
         autoPlay
         loop
         muted
@@ -282,9 +335,7 @@ export function Hero() {
         className="absolute inset-0 w-full h-full object-cover will-change-transform"
         onContextMenu={(e) => e.preventDefault()}
         controlsList="nodownload"
-      >
-        <source src={siteConfig.hero.video} type="video/mp4" />
-      </video>
+      />
 
       <div className={cn(
         "relative z-10 text-center px-4 max-w-5xl mt-20 transition-all duration-1000",
@@ -497,7 +548,7 @@ export function PortfolioGrid() {
               <X size={40} />
             </button>
             <div className="w-full max-w-7xl px-8 aspect-video" onClick={(e) => e.stopPropagation()}>
-              <video
+              <HlsVideo
                 src={openVideo}
                 autoPlay
                 controls
@@ -557,14 +608,12 @@ function PortfolioItem({ item, onOpen }: any) {
     }
   }, [shouldPlay]);
 
-  // Cleanup on unmount — free memory
+  // Cleanup on unmount — free memory (HLS src is managed by hls.js, just pause)
   useEffect(() => {
     return () => {
       const video = videoRef.current;
       if (video) {
         video.pause();
-        video.removeAttribute("src");
-        video.load();
       }
     };
   }, []);
@@ -586,8 +635,9 @@ function PortfolioItem({ item, onOpen }: any) {
 
       {/* Video — only mount source when near viewport */}
       {isNearViewport && (
-        <video
+        <HlsVideo
           ref={videoRef}
+          src={item.video}
           muted
           loop
           playsInline
@@ -600,9 +650,7 @@ function PortfolioItem({ item, onOpen }: any) {
           )}
           onContextMenu={(e) => e.preventDefault()}
           controlsList="nodownload"
-        >
-          <source src={item.video} type="video/mp4" />
-        </video>
+        />
       )}
 
       <div className={cn(
@@ -623,7 +671,7 @@ function PortfolioItem({ item, onOpen }: any) {
             onClick={(e) => e.stopPropagation()}
             className="mt-4 flex items-center gap-2 text-[9px] uppercase tracking-[0.3em] text-white/60 hover:text-[#C5A059] transition-colors duration-300 w-fit"
           >
-            View <ExternalLink size={10} />
+            View more <ExternalLink size={10} />
           </a>
         )}
       </div>
@@ -692,10 +740,11 @@ export function FeaturedCarousel() {
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 className="absolute inset-0"
               >
-                <video
+                <HlsVideo
                   ref={(el) => {
                     if (el) isGlobalPaused ? el.pause() : el.play().catch(() => { });
                   }}
+                  src={items[currentIndex].video}
                   loop
                   muted
                   playsInline
@@ -703,9 +752,7 @@ export function FeaturedCarousel() {
                   className="w-full h-full object-cover will-change-transform"
                   onContextMenu={(e) => e.preventDefault()}
                   controlsList="nodownload"
-                >
-                  <source src={items[currentIndex].video} type="video/mp4" />
-                </video>
+                />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/20 to-transparent p-10 md:p-16 flex flex-col justify-center pointer-events-none">
                   <div className="pointer-events-auto">
                     <motion.p
@@ -766,7 +813,7 @@ export function FeaturedCarousel() {
               <X size={40} />
             </button>
             <div className="w-full max-w-7xl px-8 aspect-video">
-              <video
+              <HlsVideo
                 src={items[currentIndex].video}
                 autoPlay
                 controls
