@@ -470,7 +470,7 @@ export function BrandStrip() {
 export function PortfolioGrid() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [openVideo, setOpenVideo] = useState<string | null>(null);
-  const categories = ["All", "Director's Cut", "Event", "Brands", "Weddings"];
+  const categories = ["All", "Event", "Brands", "Weddings"];
 
   const filteredItems = activeCategory === "All"
     ? siteConfig.portfolio
