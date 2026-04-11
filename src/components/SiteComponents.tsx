@@ -18,11 +18,20 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
   ref
 ) {
   const internalRef = useRef<HTMLVideoElement>(null);
-  const videoRef = (ref as React.RefObject<HTMLVideoElement>) ?? internalRef;
   const hlsRef = useRef<Hls | null>(null);
 
+  // Sync the forwarded ref (object or function) with our internal element
   useEffect(() => {
-    const video = videoRef.current;
+    if (!ref) return;
+    if (typeof ref === "function") {
+      ref(internalRef.current);
+    } else {
+      (ref as React.MutableRefObject<HTMLVideoElement | null>).current = internalRef.current;
+    }
+  }, [ref]);
+
+  useEffect(() => {
+    const video = internalRef.current;
     if (!video || !src) return;
 
     // Clean up previous instance
@@ -33,7 +42,11 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
 
     if (src.endsWith(".m3u8")) {
       if (Hls.isSupported()) {
-        const hls = new Hls({ startLevel: -1 });
+        const hls = new Hls({ 
+          startLevel: -1,
+          enableWorker: true,
+          lowLatencyMode: true 
+        });
         hlsRef.current = hls;
         hls.loadSource(src);
         hls.attachMedia(video);
@@ -53,7 +66,7 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
     };
   }, [src]);
 
-  return <video ref={videoRef} {...rest} />;
+  return <video ref={internalRef} {...rest} />;
 });
 
 
@@ -457,7 +470,7 @@ export function BrandStrip() {
 export function PortfolioGrid() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [openVideo, setOpenVideo] = useState<string | null>(null);
-  const categories = ["All", "Event", "Brands", "Weddings"];
+  const categories = ["All", "Director's Cut", "Event", "Brands", "Weddings"];
 
   const filteredItems = activeCategory === "All"
     ? siteConfig.portfolio
@@ -683,7 +696,15 @@ function PortfolioItem({ item, onOpen }: any) {
 export function FeaturedCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-  const items = siteConfig.portfolio.slice(0, 4);
+  const items = siteConfig.portfolio.filter(item => 
+    item.category === "Director's Cut" || 
+    item.title.toLowerCase().includes("director's cut")
+  ).length > 0 
+    ? siteConfig.portfolio.filter(item => 
+        item.category === "Director's Cut" || 
+        item.title.toLowerCase().includes("director's cut")
+      ) 
+    : siteConfig.portfolio.slice(0, 4);
   const isGlobalPaused = useGlobalPauseState();
 
   useEffect(() => {

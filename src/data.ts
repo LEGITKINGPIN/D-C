@@ -86,11 +86,20 @@ export const siteConfig = {
     {
       id: "6",
       title: "The Director's Cut",
-      category: "Event",
+      category: "Director's Cut",
       video: "work/cinematic-films/Video-212/playlist.m3u8",
       thumbnail: "https://picsum.photos/seed/film/800/1200",
       aspect: "aspect-[2/3]",
       playbookBoard: "liveEvents",
+    },
+    {
+      id: "7",
+      title: "Visionary Edit",
+      category: "Director's Cut",
+      video: "film/videoplayback (2)/playlist.m3u8",
+      thumbnail: "https://picsum.photos/seed/vision/800/1200",
+      aspect: "aspect-[3/4]",
+      playbookBoard: "artAesthetics",
     },
   ],
   gallery: [
