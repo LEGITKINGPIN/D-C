@@ -1,20 +1,26 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# D&C MediaHouse - Cinematic Portfolio
 
-# Run and deploy your AI Studio app
+A high-end cinematic portfolio website for D&C MediaHouse, featuring adaptive video streaming (HLS) and modern animations.
 
-This contains everything you need to run your app locally.
+## Live Site
+The site is hosted on GitHub Pages: [https://LEGITKINGPIN.github.io/D-C/](https://LEGITKINGPIN.github.io/D-C/)
 
-View your app in AI Studio: https://ai.studio/apps/e3d52817-7a03-47ab-b4b1-55455b800be1
+## Development
 
-## Run Locally
+**Prerequisites:** Node.js
 
-**Prerequisites:**  Node.js
+1.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
+2.  **Run locally:**
+    ```bash
+    npm run dev
+    ```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Features
+- **Adaptive Streaming**: All videos use HLS (.m3u8) for instant playback and high performance.
+- **Cinematic Mode**: Idle-triggered immersive viewing experience.
+- **Responsive Design**: Optimized for desktop and mobile devices.
+- **Automated Deployment**: Integrated with GitHub Actions for seamless updates.
