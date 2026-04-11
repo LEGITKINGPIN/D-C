@@ -472,9 +472,10 @@ export function PortfolioGrid() {
   const [openVideo, setOpenVideo] = useState<string | null>(null);
   const categories = ["All", "Event", "Brands", "Weddings"];
 
-  const filteredItems = activeCategory === "All"
+  const filteredItems = (activeCategory === "All"
     ? siteConfig.portfolio
-    : siteConfig.portfolio.filter(item => item.category === activeCategory);
+    : siteConfig.portfolio.filter(item => item.category === activeCategory)
+  ).filter(item => !(item as any).isDirectorCut);
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("videoModalState", { detail: !!openVideo }));
@@ -696,15 +697,7 @@ function PortfolioItem({ item, onOpen }: any) {
 export function FeaturedCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-  const items = siteConfig.portfolio.filter(item => 
-    item.category === "Director's Cut" || 
-    item.title.toLowerCase().includes("director's cut")
-  ).length > 0 
-    ? siteConfig.portfolio.filter(item => 
-        item.category === "Director's Cut" || 
-        item.title.toLowerCase().includes("director's cut")
-      ) 
-    : siteConfig.portfolio.slice(0, 4);
+  const items = siteConfig.portfolio.filter(item => (item as any).isDirectorCut);
   const isGlobalPaused = useGlobalPauseState();
 
   useEffect(() => {
