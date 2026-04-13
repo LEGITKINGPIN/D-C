@@ -475,7 +475,10 @@ export const BrandStrip = memo(function BrandStrip() {
   const brands = useMemo(() => [...siteConfig.brands, ...siteConfig.brands, ...siteConfig.brands], []);
 
   return (
-    <div className="-mt-px py-16 md:py-24 bg-white border-b border-[#2D2926]/5 overflow-hidden relative">
+    <div className="relative bg-white border-b border-[#2D2926]/5 overflow-hidden">
+      {/* Top overlap strip to eliminate any seam between Hero and BrandStrip */}
+      <div className="absolute top-0 left-0 right-0 h-2 bg-white -translate-y-full" />
+      <div className="py-16 md:py-24 relative">
       <div className="relative mb-12 md:mb-16">
         <div className="absolute inset-y-0 left-0 w-24 md:w-64 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
         <div className="absolute inset-y-0 right-0 w-24 md:w-64 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
@@ -518,6 +521,7 @@ export const BrandStrip = memo(function BrandStrip() {
           </p>
           <div className="h-[1px] w-6 md:w-8 bg-[#C5A059]/20" />
         </div>
+      </div>
       </div>
     </div>
   );
