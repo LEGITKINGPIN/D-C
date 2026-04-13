@@ -56,8 +56,11 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
           });
         }
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        // Safari native HLS
+        // Safari native HLS (iOS)
         video.src = src;
+        if (rest.autoPlay) {
+          video.play().catch(() => {});
+        }
       }
     } else {
       video.src = src;
@@ -71,7 +74,17 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
     };
   }, [src]);
 
-  return <video ref={internalRef} {...rest} />;
+  // iOS Safari requires these attributes to allow inline playback
+  // and prevent the native QuickTime fullscreen player from hijacking
+  return (
+    <video
+      ref={internalRef}
+      {...rest}
+      playsInline
+      // @ts-ignore – webkit vendor attribute for older iOS
+      webkit-playsinline="true"
+    />
+  );
 });
 
 
@@ -610,6 +623,7 @@ export function PortfolioGrid() {
                 src={openVideo}
                 autoPlay
                 controls
+                playsInline
                 className="w-full h-full object-contain"
                 onContextMenu={(e) => e.preventDefault()}
                 controlsList="nodownload"
@@ -922,6 +936,7 @@ export function FeaturedCarousel() {
                 src={items[currentIndex].video}
                 autoPlay
                 controls
+                playsInline
                 className="w-full h-full object-contain"
                 onContextMenu={(e) => e.preventDefault()}
                 controlsList="nodownload"
