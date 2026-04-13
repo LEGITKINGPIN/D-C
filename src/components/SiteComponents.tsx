@@ -145,6 +145,21 @@ export function useIdleTimer(timeoutMs = 10000) {
       }
     };
 
+    // Touch handling for mobile — overflow:hidden blocks scroll events,
+    // so we detect swipe-up (scroll down intent) via touch delta
+    let touchStartY = 0;
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+    };
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isIdleRef.current) return;
+      const deltaY = touchStartY - e.touches[0].clientY;
+      // If user swipes up by more than 30px, exit immersion
+      if (deltaY > 30) {
+        setIsIdle(false);
+      }
+    };
+
     // Throttled mousemove to avoid excessive state updates
     const throttledReset = () => {
       const now = Date.now();
@@ -167,6 +182,8 @@ export function useIdleTimer(timeoutMs = 10000) {
 
     window.addEventListener("mousemove", throttledReset, { passive: true });
     window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
     window.addEventListener("keydown", resetTimer);
     window.addEventListener("triggerCinematic", triggerManual);
     window.addEventListener("exitCinematic", exitManual);
@@ -180,9 +197,12 @@ export function useIdleTimer(timeoutMs = 10000) {
 
     return () => {
       window.removeEventListener("mousemove", throttledReset);
-      window.removeEventListener("scroll", throttledReset);
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("keydown", resetTimer);
       window.removeEventListener("triggerCinematic", triggerManual);
+      window.removeEventListener("exitCinematic", exitManual);
       clearTimeout(timeoutId);
     };
   }, [timeoutMs, isGlobalPaused]);
