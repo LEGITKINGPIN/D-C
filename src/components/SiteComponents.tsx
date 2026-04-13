@@ -160,6 +160,16 @@ export function useIdleTimer(timeoutMs = 10000) {
       }
     };
 
+    // Wheel handling for PC — overflow:hidden blocks scroll events,
+    // but wheel events still fire on mouse wheel / trackpad
+    const handleWheel = (e: WheelEvent) => {
+      if (!isIdleRef.current) return;
+      // deltaY > 0 means scrolling down
+      if (e.deltaY > 0) {
+        setIsIdle(false);
+      }
+    };
+
     // Throttled mousemove to avoid excessive state updates
     const throttledReset = () => {
       const now = Date.now();
@@ -182,6 +192,7 @@ export function useIdleTimer(timeoutMs = 10000) {
 
     window.addEventListener("mousemove", throttledReset, { passive: true });
     window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("wheel", handleWheel, { passive: true });
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
     window.addEventListener("touchmove", handleTouchMove, { passive: true });
     window.addEventListener("keydown", resetTimer);
@@ -198,6 +209,7 @@ export function useIdleTimer(timeoutMs = 10000) {
     return () => {
       window.removeEventListener("mousemove", throttledReset);
       window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("wheel", handleWheel);
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("keydown", resetTimer);
