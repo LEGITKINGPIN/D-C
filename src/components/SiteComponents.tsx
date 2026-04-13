@@ -475,7 +475,7 @@ export function Hero() {
         )}
       >
         <span className="text-[9px] uppercase tracking-[0.4em] font-bold group-hover:tracking-[0.5em] transition-all duration-300">
-          Immersive
+          Watch
         </span>
         <Play size={14} fill="currentColor" />
       </button>
