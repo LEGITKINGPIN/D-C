@@ -438,7 +438,7 @@ export function Hero() {
         onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new Event("triggerCinematic")); }}
         title="Enter Cinematic Mode"
         className={cn(
-          "absolute bottom-8 right-8 z-20 flex px-5 py-3 items-center gap-3 bg-black/30 hover:bg-[#C5A059] backdrop-blur-md rounded-full text-white/70 hover:text-white border border-white/10 hover:border-transparent transition-all duration-500 shadow-lg group",
+          "absolute bottom-24 md:bottom-8 right-6 md:right-8 z-20 flex px-5 py-3 items-center gap-3 bg-black/30 hover:bg-[#C5A059] backdrop-blur-md rounded-full text-white/70 hover:text-white border border-white/10 hover:border-transparent transition-all duration-500 shadow-lg group",
           isIdle ? "opacity-0 pointer-events-none" : "opacity-100"
         )}
       >
