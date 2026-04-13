@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "motion/react";
-import { useState, useEffect, useRef, useCallback, forwardRef } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef, memo, useMemo, useImperativeHandle } from "react";
 import Hls from "hls.js";
-import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink } from "lucide-react";
+import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink, Volume2, VolumeX } from "lucide-react";
 import { cn } from "../lib/utils";
 import { siteConfig } from "../data";
 import { useInView } from "react-intersection-observer";
@@ -20,15 +20,8 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
   const internalRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
 
-  // Sync the forwarded ref (object or function) with our internal element
-  useEffect(() => {
-    if (!ref) return;
-    if (typeof ref === "function") {
-      ref(internalRef.current);
-    } else {
-      (ref as React.MutableRefObject<HTMLVideoElement | null>).current = internalRef.current;
-    }
-  }, [ref]);
+  // Proper ref forwarding via useImperativeHandle
+  useImperativeHandle(ref, () => internalRef.current!, []);
 
   useEffect(() => {
     const video = internalRef.current;
@@ -42,14 +35,26 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
 
     if (src.endsWith(".m3u8")) {
       if (Hls.isSupported()) {
-        const hls = new Hls({ 
+        const hls = new Hls({
           startLevel: -1,
           enableWorker: true,
-          lowLatencyMode: true 
+          // Optimized for fast VOD startup & sub-3s buffering
+          maxBufferLength: 10,            // buffer 10s ahead
+          maxMaxBufferLength: 30,         // cap total buffer at 30s
+          maxBufferSize: 30 * 1000 * 1000, // 30MB max buffer memory
+          startFragPrefetch: true,        // prefetch first segment before manifest fully parsed
+          backBufferLength: 5,            // keep only 5s of back-buffer
         });
         hlsRef.current = hls;
         hls.loadSource(src);
         hls.attachMedia(video);
+
+        // autoPlay doesn't work natively with hls.js — kick-start after manifest parse
+        if (rest.autoPlay) {
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            video.play().catch(() => {});
+          });
+        }
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
         // Safari native HLS
         video.src = src;
@@ -98,6 +103,12 @@ export function useIdleTimer(timeoutMs = 10000) {
   const [isIdle, setIsIdle] = useState(false);
   const isGlobalPaused = useGlobalPauseState();
   const lastMoveTime = useRef(0);
+  const isIdleRef = useRef(false);
+
+  // Keep ref in sync with state for use in event handlers
+  useEffect(() => {
+    isIdleRef.current = isIdle;
+  }, [isIdle]);
 
   useEffect(() => {
     if (isGlobalPaused) {
@@ -107,14 +118,18 @@ export function useIdleTimer(timeoutMs = 10000) {
 
     let timeoutId: NodeJS.Timeout;
     const resetTimer = () => {
+      // Mouse move is sticky once in immersion - only scroll or manual exit works
+      if (isIdleRef.current) return;
+
       setIsIdle(false);
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        // Only trigger idle mode if we are near the top of the page (at the Hero)
-        if (window.scrollY < 100) {
-          setIsIdle(true);
-        }
-      }, timeoutMs);
+    };
+
+    const handleScroll = () => {
+      // Scroll always exits immersion as requested
+      if (isIdleRef.current) {
+        setIsIdle(false);
+      }
     };
 
     // Throttled mousemove to avoid excessive state updates
@@ -127,20 +142,28 @@ export function useIdleTimer(timeoutMs = 10000) {
     };
 
     const triggerManual = () => {
+      // Scroll to top automatically so user is not stuck midway
+      window.scrollTo({ top: 0, behavior: "smooth" });
       setIsIdle(true);
       clearTimeout(timeoutId);
     };
 
+    const exitManual = () => {
+      setIsIdle(false);
+    };
+
     window.addEventListener("mousemove", throttledReset, { passive: true });
-    window.addEventListener("scroll", throttledReset, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("keydown", resetTimer);
     window.addEventListener("triggerCinematic", triggerManual);
+    window.addEventListener("exitCinematic", exitManual);
 
-    timeoutId = setTimeout(() => {
-      if (window.scrollY < 100) {
-        setIsIdle(true);
-      }
-    }, timeoutMs);
+    // Automatic idle trigger is disabled based on user request "let the immersion button do its job"
+    // timeoutId = setTimeout(() => {
+    //   if (window.scrollY < 100) {
+    //     setIsIdle(true);
+    //   }
+    // }, timeoutMs);
 
     return () => {
       window.removeEventListener("mousemove", throttledReset);
@@ -278,44 +301,60 @@ export function Hero() {
   const isIdle = useIdleTimer(10000);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isGlobalPaused = useGlobalPauseState();
-  const fadeRef = useRef<number | null>(null);
+  const audioFadeRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fade volume in/out when idle state changes
+  // Play video on component mount and keep it playing throughout
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const targetVolume = isIdle ? 0.15 : 0;
-    const duration = 800; // ms
-    const startVolume = video.volume;
-    const startTime = performance.now();
+    video.play().catch(() => { });
+  }, []);
 
-    // If fading in, unmute first
-    if (isIdle) video.muted = false;
+  // FIXED: Handle audio fade-in on immersion entry, immediate kill on exit
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
 
-    // Cancel any existing fade
-    if (fadeRef.current) cancelAnimationFrame(fadeRef.current);
+    // Clear any existing fade animation
+    if (audioFadeRef.current) {
+      clearInterval(audioFadeRef.current);
+      audioFadeRef.current = null;
+    }
 
-    const animate = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic for smooth feel
-      const eased = 1 - Math.pow(1 - progress, 3);
-      video.volume = startVolume + (targetVolume - startVolume) * eased;
+    if (isIdle) {
+      // ✅ ENTERING IMMERSION: Unmute and fade in volume over 1 second
+      video.muted = false;
+      video.volume = 0;
 
-      if (progress < 1) {
-        fadeRef.current = requestAnimationFrame(animate);
-      } else {
-        // If fading out, mute after reaching 0
-        if (!isIdle) video.muted = true;
-        fadeRef.current = null;
-      }
-    };
+      const targetVolume = 0.3;
+      const duration = 1000; // 1 second fade-in
+      const startTime = Date.now();
 
-    fadeRef.current = requestAnimationFrame(animate);
+      audioFadeRef.current = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Ease-out cubic for smooth fade
+        const eased = 1 - Math.pow(1 - progress, 3);
+        video.volume = targetVolume * eased;
+
+        if (progress >= 1) {
+          clearInterval(audioFadeRef.current!);
+          audioFadeRef.current = null;
+        }
+      }, 16); // ~60fps
+    } else {
+      // ✅ EXITING IMMERSION: Immediately mute and silence
+      video.muted = true;
+      video.volume = 0;
+    }
 
     return () => {
-      if (fadeRef.current) cancelAnimationFrame(fadeRef.current);
+      if (audioFadeRef.current) {
+        clearInterval(audioFadeRef.current);
+        audioFadeRef.current = null;
+      }
     };
   }, [isIdle]);
 
@@ -340,7 +379,6 @@ export function Hero() {
       <HlsVideo
         ref={videoRef}
         src={siteConfig.hero.video}
-        autoPlay
         loop
         muted
         playsInline
@@ -362,41 +400,25 @@ export function Hero() {
           <span className="text-[#C5A059] text-[10px] uppercase tracking-[0.6em] font-bold mb-8 block">
             {siteConfig.hero.topline}
           </span>
-          <h1 className="text-4xl sm:text-6xl lg:text-8xl xl:text-9xl font-bold text-[#F8F5F0] drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] tracking-tight mb-8 leading-[0.85] font-playfair italic will-change-transform">
+          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-[#F8F5F0] drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] tracking-tight mb-6 sm:mb-8 leading-[0.9] sm:leading-[0.85] font-playfair italic will-change-transform">
             {siteConfig.hero.headline}
           </h1>
-          <p className="text-sm md:text-xl text-[#2D2926] font-medium tracking-widest mb-12 max-w-2xl mx-auto uppercase">
+          <p className="text-[10px] sm:text-sm md:text-xl text-[#F8F5F0]/80 font-medium tracking-[0.3em] sm:tracking-widest mb-8 sm:mb-12 max-w-2xl mx-auto uppercase drop-shadow-md">
             {siteConfig.hero.subheadline}
           </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center drop-shadow-lg">
-            <a href={siteConfig.hero.primaryButton.link} className="px-12 py-5 bg-[#C5A059] text-white text-[11px] uppercase tracking-[0.4em] font-medium hover:bg-[#A68546] shadow-md transition-all duration-500">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center drop-shadow-lg scale-90 sm:scale-100">
+            <a href={siteConfig.hero.primaryButton.link} className="w-full sm:w-auto px-10 sm:px-12 py-4 sm:py-5 bg-[#C5A059] text-white text-[10px] sm:text-[11px] uppercase tracking-[0.4em] font-medium hover:bg-[#A68546] shadow-md transition-all duration-500 whitespace-nowrap">
               {siteConfig.hero.primaryButton.text}
             </a>
-            <a href={siteConfig.hero.secondaryButton.link} className="px-12 py-5 text-[#2D2926] text-[11px] uppercase tracking-[0.4em] font-medium hover:text-[#C5A059] transition-all duration-500">
+            <a href={siteConfig.hero.secondaryButton.link} className="w-full sm:w-auto px-10 sm:px-12 py-4 sm:py-5 text-[#F8F5F0] sm:text-[#2D2926] text-[10px] sm:text-[11px] uppercase tracking-[0.4em] font-medium hover:text-[#C5A059] transition-all duration-500 whitespace-nowrap">
               {siteConfig.hero.secondaryButton.text}
             </a>
           </div>
         </motion.div>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1, duration: 0.6 }}
-        className={cn(
-          "absolute bottom-8 inset-x-0 flex flex-col items-center gap-3 pointer-events-none transition-opacity duration-1000",
-          isIdle ? "opacity-0" : "opacity-100"
-        )}
-      >
-        <span className="text-[#F8F5F0] text-[8px] uppercase tracking-[0.5em] font-extrabold drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)] mb-2 mr-[-0.5em]">Scroll</span>
-        <div className="w-[1px] h-12 bg-[#C5A059]/60 relative overflow-hidden">
-          <motion.div
-            animate={{ y: [-48, 48] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-0 left-0 w-full h-full bg-[#C5A059] shadow-md"
-          />
-        </div>
-      </motion.div>
+
+
 
       {/* Manual Cinematic Mode Button */}
       <button
@@ -412,13 +434,32 @@ export function Hero() {
         </span>
         <Play size={14} fill="currentColor" />
       </button>
+
+      {/* Immersion Controls - Exit Only */}
+      <AnimatePresence>
+        {isIdle && (
+          <div className="absolute bottom-10 right-10 z-30 flex items-center gap-4">
+            {/* Stop Immersion (X) */}
+            <motion.button
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new Event("exitCinematic")); }}
+              className="p-5 bg-black/50 hover:bg-white text-white hover:text-black backdrop-blur-2xl rounded-full border border-white/20 transition-all duration-500 shadow-2xl flex items-center justify-center group"
+              title="Exit Immersion"
+            >
+              <X size={26} strokeWidth={1.5} />
+            </motion.button>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
 
 // --- Brand Strip ---
-export function BrandStrip() {
-  const brands = [...siteConfig.brands, ...siteConfig.brands, ...siteConfig.brands];
+export const BrandStrip = memo(function BrandStrip() {
+  const brands = useMemo(() => [...siteConfig.brands, ...siteConfig.brands, ...siteConfig.brands], []);
 
   return (
     <div className="py-16 md:py-24 bg-white border-b border-[#2D2926]/5 overflow-hidden relative">
@@ -443,6 +484,9 @@ export function BrandStrip() {
                     src={brand.logo}
                     alt={brand.name}
                     loading="lazy"
+                    decoding="async"
+                    width={96}
+                    height={96}
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
@@ -464,18 +508,18 @@ export function BrandStrip() {
       </div>
     </div>
   );
-}
+});
 
 // --- Portfolio Grid ---
 export function PortfolioGrid() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [openVideo, setOpenVideo] = useState<string | null>(null);
-  const categories = ["All", "Event", "Brands", "Weddings"];
+  const categories = ["All", "Event", "Brands", "Commercials"];
 
-  const filteredItems = (activeCategory === "All"
+  const filteredItems = useMemo(() => (activeCategory === "All"
     ? siteConfig.portfolio
     : siteConfig.portfolio.filter(item => item.category === activeCategory)
-  ).filter(item => !(item as any).isDirectorCut);
+  ).filter(item => !(item as any).isDirectorCut), [activeCategory]);
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("videoModalState", { detail: !!openVideo }));
@@ -510,15 +554,15 @@ export function PortfolioGrid() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           <AnimatePresence mode="popLayout">
             {filteredItems.map((item) => (
-              <motion.div 
-                key={item.id} 
+              <motion.div
+                key={item.id}
                 layout
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ 
+                transition={{
                   duration: 0.6,
-                  ease: [0.22, 1, 0.36, 1] 
+                  ease: [0.22, 1, 0.36, 1]
                 }}
               >
                 <PortfolioItem
@@ -578,7 +622,7 @@ export function PortfolioGrid() {
   );
 }
 
-function PortfolioItem({ item, onOpen }: any) {
+const PortfolioItem = memo(function PortfolioItem({ item, onOpen }: any) {
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
@@ -691,13 +735,105 @@ function PortfolioItem({ item, onOpen }: any) {
       </div>
     </div>
   );
-}
+});
 
 // --- Featured Carousel ---
+const FilmSlide = memo(function FilmSlide({
+  item,
+  isGlobalPaused,
+  onPlayReel,
+}: {
+  item: (typeof siteConfig.portfolio)[number];
+  isGlobalPaused: boolean;
+  onPlayReel: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Attempt play whenever globalPaused changes or component mounts
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isGlobalPaused) {
+      video.pause();
+    } else {
+      video.play().catch(() => {});
+    }
+  }, [isGlobalPaused]);
+
+  // When HLS finishes loading & the video has enough data, kick-start playback
+  const handleCanPlay = useCallback(() => {
+    const video = videoRef.current;
+    if (video && !isGlobalPaused) {
+      video.play().catch(() => {});
+    }
+  }, [isGlobalPaused]);
+
+  const smoothEase = [0.25, 0.1, 0.25, 1] as const;  // CSS "ease" equivalent
+  const slideEase = [0.22, 1, 0.36, 1] as const;      // Smooth decel
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 1.04 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.97 }}
+      transition={{ duration: 0.9, ease: smoothEase }}
+      className="absolute inset-0"
+    >
+      <HlsVideo
+        ref={videoRef}
+        src={item.video}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        onCanPlay={handleCanPlay}
+        onLoadedData={handleCanPlay}
+        className="w-full h-full object-cover will-change-transform"
+        onContextMenu={(e) => e.preventDefault()}
+        controlsList="nodownload"
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/20 to-transparent p-10 md:p-16 flex flex-col justify-center pointer-events-none">
+        <div className="pointer-events-auto">
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: slideEase }}
+            className="text-[#C5A059] font-bold tracking-[0.6em] uppercase text-[10px] mb-4 md:mb-6"
+          >
+            {item.category}
+          </motion.p>
+          <motion.h4
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.7, delay: 0.45, ease: slideEase }}
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold text-[#F8F5F0] drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)] mb-8 md:mb-10 max-w-3xl leading-[0.9] font-serif italic"
+          >
+            {item.title}
+          </motion.h4>
+          <motion.button
+            onClick={onPlayReel}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.6, delay: 0.6, ease: slideEase }}
+            className="w-fit px-8 md:px-12 py-4 md:py-5 bg-[#C5A059] text-white text-[10px] uppercase tracking-[0.4em] font-bold hover:bg-[#A68546] transition-all duration-500"
+          >
+            Play Reel
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+
 export function FeaturedCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-  const items = siteConfig.portfolio.filter(item => (item as any).isDirectorCut);
+  const items = useMemo(() => siteConfig.portfolio.filter(item => (item as any).isDirectorCut), []);
   const isGlobalPaused = useGlobalPauseState();
 
   useEffect(() => {
@@ -746,57 +882,12 @@ export function FeaturedCarousel() {
 
           <div className="relative aspect-[4/5] md:aspect-video w-full overflow-hidden bg-transparent border border-[#2D2926]/5 rounded-2xl md:rounded-[3rem]">
             <AnimatePresence initial={false}>
-              <motion.div
+              <FilmSlide
                 key={currentIndex}
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -40 }}
-                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute inset-0"
-              >
-                <HlsVideo
-                  ref={(el) => {
-                    if (el) isGlobalPaused ? el.pause() : el.play().catch(() => { });
-                  }}
-                  src={items[currentIndex].video}
-                  loop
-                  muted
-                  playsInline
-                  preload="metadata"
-                  className="w-full h-full object-cover will-change-transform"
-                  onContextMenu={(e) => e.preventDefault()}
-                  controlsList="nodownload"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/20 to-transparent p-10 md:p-16 flex flex-col justify-center pointer-events-none">
-                  <div className="pointer-events-auto">
-                    <motion.p
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="text-[#C5A059] font-bold tracking-[0.6em] uppercase text-[10px] mb-4 md:mb-6"
-                    >
-                      {items[currentIndex].category}
-                    </motion.p>
-                    <motion.h4
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-bold text-[#F8F5F0] drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)] mb-8 md:mb-10 max-w-3xl leading-[0.9] font-serif italic"
-                    >
-                      {items[currentIndex].title}
-                    </motion.h4>
-                    <motion.button
-                      onClick={() => setIsVideoModalOpen(true)}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.4 }}
-                      className="w-fit px-8 md:px-12 py-4 md:py-5 bg-[#C5A059] text-white text-[10px] uppercase tracking-[0.4em] font-bold hover:bg-[#A68546] transition-all duration-500"
-                    >
-                      Play Reel
-                    </motion.button>
-                  </div>
-                </div>
-              </motion.div>
+                item={items[currentIndex]}
+                isGlobalPaused={isGlobalPaused}
+                onPlayReel={() => setIsVideoModalOpen(true)}
+              />
             </AnimatePresence>
           </div>
 
@@ -844,7 +935,8 @@ export function FeaturedCarousel() {
 }
 
 // --- Gallery Section ---
-export function Gallery() {
+export const Gallery = memo(function Gallery() {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { ref, inView } = useInView({
     triggerOnce: true,
     threshold: 0.1,
@@ -856,7 +948,7 @@ export function Gallery() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 md:mb-24 gap-8 md:gap-12">
           <div className="max-w-xl">
             <h2 className="text-[#C5A059] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Visual Journal</h2>
-            <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Moments in time.</h3>
+            <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Collaborations.</h3>
           </div>
           <p className="text-[#2D2926]/30 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right">
             A collection of frames captured across the globe.
@@ -869,8 +961,9 @@ export function Gallery() {
               key={idx}
               initial={{ opacity: 0, y: 30 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, delay: idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="break-inside-avoid overflow-hidden group bg-white border border-[#2D2926]/5 rounded-2xl md:rounded-[2rem]"
+              transition={{ duration: 0.8, delay: Math.min(idx * 0.06, 0.6), ease: [0.22, 1, 0.36, 1] }}
+              className="break-inside-avoid overflow-hidden group bg-white border border-[#2D2926]/5 rounded-2xl md:rounded-[2rem] cursor-zoom-in"
+              onClick={() => setSelectedImage(img)}
             >
               <img
                 src={img}
@@ -884,9 +977,44 @@ export function Gallery() {
           ))}
         </div>
       </div>
+
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedImage(null)}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2D2926]/95 backdrop-blur-xl p-4 md:p-12 cursor-zoom-out"
+          >
+            <motion.button
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-6 right-6 md:top-10 md:right-10 text-white/50 hover:text-white transition-all duration-300 z-[101]"
+            >
+              <X size={40} strokeWidth={1.5} />
+            </motion.button>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative w-full h-full flex items-center justify-center"
+            >
+              <img
+                src={selectedImage}
+                alt="Selected Gallery Item"
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
-}
+});
 
 
 // --- Merged Contact Section ---
@@ -921,34 +1049,39 @@ export function Contact() {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 1, delay: 0.2 }}
             viewport={{ once: true }}
-            className="lg:col-span-5"
+            className="lg:col-span-5 space-y-8"
           >
-            <h3 className="text-3xl md:text-5xl font-bold text-[#2D2926] tracking-tight font-serif italic mb-6">
-              Want to get in touch?
-            </h3>
-            <p className="text-[#2D2926]/50 text-base md:text-lg mb-12 max-w-md leading-relaxed">
-              Drop me a message! Whether you have a project in mind or just want to say hi, I'll get back to you within 24 hours.
-            </p>
+            <div>
+              <h3 className="text-4xl md:text-6xl font-bold text-[#2D2926] tracking-tight font-serif italic mb-6 leading-tight">
+                Want to <span className="text-[#C5A059]">get in touch</span>?
+              </h3>
+              <p className="text-[#2D2926]/65 text-base md:text-lg leading-relaxed max-w-md">
+                Drop me a message! Whether you have a project in mind or just want to say hi, I'll get back to you within 24 hours.
+              </p>
+            </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <a
-                href={siteConfig.contact.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-4 px-10 py-5 border border-[#25D366]/20 bg-white text-[#2D2926] text-[10px] uppercase tracking-[0.5em] font-bold hover:bg-[#25D366] hover:text-white transition-all duration-700 group shadow-sm flex-1 sm:flex-none justify-center"
-              >
-                <MessageCircle size={16} className="text-[#25D366] group-hover:text-white" />
-                WhatsApp
-              </a>
-              <a
-                href={siteConfig.contact.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-4 px-10 py-5 border border-[#C5A059]/20 bg-white text-[#2D2926] text-[10px] uppercase tracking-[0.5em] font-bold hover:bg-[#C5A059] hover:text-white transition-all duration-700 group shadow-sm flex-1 sm:flex-none justify-center"
-              >
-                <Instagram size={16} className="text-[#C5A059] group-hover:text-white" />
-                Instagram
-              </a>
+            <div className="space-y-4 pt-6">
+              <p className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/40">Quick Connect</p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <a
+                  href={siteConfig.contact.whatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-8 py-4 border-2 border-[#25D366]/40 bg-white text-[#2D2926] text-[9px] uppercase tracking-[0.4em] font-bold hover:bg-[#25D366] hover:text-white hover:border-[#25D366] transition-all duration-500 group shadow-sm flex-1 sm:flex-none justify-center"
+                >
+                  <MessageCircle size={16} className="text-[#25D366] group-hover:text-white transition-colors" />
+                  WhatsApp
+                </a>
+                <a
+                  href={siteConfig.contact.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-8 py-4 border-2 border-[#C5A059]/40 bg-white text-[#2D2926] text-[9px] uppercase tracking-[0.4em] font-bold hover:bg-[#C5A059] hover:text-white hover:border-[#C5A059] transition-all duration-500 group shadow-sm flex-1 sm:flex-none justify-center"
+                >
+                  <Instagram size={16} className="text-[#C5A059] group-hover:text-white transition-colors" />
+                  Instagram
+                </a>
+              </div>
             </div>
           </motion.div>
 
@@ -978,7 +1111,7 @@ export function Contact() {
                       headers: { "Accept": "application/json" },
                       body: data,
                     });
-                  } catch (_) {}
+                  } catch (_) { }
                   setSubmitted(true);
                 }}
                 className="space-y-6"

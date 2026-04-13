@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Large files (exceed GitHub 100MB limit)
+*.mp4
+D-C-main backup.zip
+D-C-main backup/

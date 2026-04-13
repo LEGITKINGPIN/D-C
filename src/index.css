@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;700;900&family=Montserrat:wght@100;300;400;500;700;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap');
+
+/* Fonts now loaded via <link preload> in index.html for non-blocking fetch */
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -22,6 +23,12 @@ body {
   color: #2D2926;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* GPU-accelerate elements that animate transforms/opacity */
+.will-change-transform {
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 /* Custom scrollbar */

@@ -11,4 +11,23 @@ export default defineConfig({
       '@': path.resolve(__dirname, '.'),
     },
   },
+  build: {
+    // Target modern browsers for smaller output
+    target: 'es2020',
+    // Inline assets < 4KB as base64 (saves HTTP requests for small images)
+    assetsInlineLimit: 4096,
+    // Manual chunk splitting for parallel loading & better caching
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate heavy libs into their own chunks for parallel download
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-hls': ['hls.js'],
+          'vendor-motion': ['motion'],
+        },
+      },
+    },
+    // Reduce chunk size warnings threshold
+    chunkSizeWarningLimit: 500,
+  },
 });
