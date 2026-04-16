@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect, useRef, useCallback, forwardRef, memo, useMemo, useImperativeHandle } from "react";
 import Hls from "hls.js";
-import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink, Volume2, VolumeX } from "lucide-react";
+import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink, Volume2, VolumeX, Share2 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { siteConfig } from "../data";
 import { useInView } from "react-intersection-observer";
@@ -1201,5 +1201,194 @@ export function Contact() {
         </div>
       </div>
     </section>
+  );
+}
+
+// --- Clips Layout (Vertical Videos) ---
+export function ClipsLayout() {
+  const [activeClip, setActiveClip] = useState<string | null>(null);
+  const clips = (siteConfig as any).clips || [];
+
+  return (
+    <section id="clips" className="py-24 md:py-32 bg-[#2D2926] px-6 md:px-8 overflow-hidden rounded-[3rem] md:rounded-[5rem] mb-20 relative z-10 mx-4 md:mx-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-16 md:mb-24 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
+          <div className="max-w-xl">
+            <h2 className="text-[#C5A059] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Shorts</h2>
+            <h3 className="text-4xl md:text-7xl font-bold text-[#F8F5F0] tracking-tight font-serif leading-none italic">Visual Notes.</h3>
+          </div>
+          <p className="text-[#F8F5F0]/30 text-[9px] uppercase tracking-[0.4em] font-bold max-w-[200px] md:text-right leading-loose">
+            VERTICAL STORYTELLING FOR THE MODERN SCREEN.
+          </p>
+        </div>
+
+        <div className="flex gap-4 md:gap-10 overflow-x-auto pb-12 scrollbar-none snap-x -mx-6 px-6 md:mx-0 md:px-0">
+          {clips.map((clip: any) => (
+            <motion.div
+              key={clip.id}
+              whileHover={{ y: -10 }}
+              className="flex-shrink-0 w-[280px] md:w-[320px] aspect-[9/16] bg-black rounded-[2.5rem] overflow-hidden relative group cursor-pointer snap-center border border-white/5 shadow-2xl"
+              onClick={() => setActiveClip(clip.video)}
+            >
+              <ClipsPreview video={clip.video} />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-10 translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                <p className="text-[#C5A059] text-[8px] uppercase tracking-[0.4em] font-bold mb-3">{clip.category}</p>
+                <h4 className="text-2xl font-bold text-white font-serif italic tracking-tight">{clip.title}</h4>
+              </div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 scale-75 group-hover:scale-100 border border-white/10 shadow-2xl">
+                <Play size={24} fill="white" className="text-white ml-1.5" />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {activeClip && (
+          <VerticalVideoPlayer
+            src={activeClip}
+            onClose={() => setActiveClip(null)}
+          />
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
+function ClipsPreview({ video }: { video: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { ref, inView } = useInView({ threshold: 0.1 });
+
+  useEffect(() => {
+    if (inView && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    } else if (videoRef.current) {
+      videoRef.current.pause();
+    }
+  }, [inView]);
+
+  return (
+    <div ref={ref} className="w-full h-full">
+      <HlsVideo
+        ref={videoRef}
+        src={video}
+        muted
+        loop
+        playsInline
+        className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-700"
+      />
+    </div>
+  );
+}
+
+function VerticalVideoPlayer({ src, onClose }: { src: string; onClose: () => void }) {
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      if (isPlaying) videoRef.current.pause();
+      else videoRef.current.play();
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (navigator.share) {
+      navigator.share({
+        title: "D&C MediaHouse Clip",
+        url: window.location.href,
+      }).catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const updateProgress = () => {
+      setProgress((video.currentTime / video.duration) * 100);
+    };
+
+    video.addEventListener("timeupdate", updateProgress);
+    return () => video.removeEventListener("timeupdate", updateProgress);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-2xl px-6"
+      onClick={onClose}
+    >
+      <div
+        className="relative h-[85vh] aspect-[9/16] bg-[#111] rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] border border-white/10"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <HlsVideo
+          ref={videoRef}
+          src={src}
+          autoPlay
+          muted={isMuted}
+          loop
+          playsInline
+          className="w-full h-full object-cover"
+          onClick={togglePlay}
+        />
+
+        {/* Top Controls */}
+        <div className="absolute top-8 left-8 right-8 flex justify-between items-center z-10">
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/40 transition-all cursor-pointer"
+          >
+            <X size={20} />
+          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+              className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/40 transition-all cursor-pointer"
+            >
+              {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+            </button>
+            <button
+              onClick={handleShare}
+              className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/40 transition-all cursor-pointer"
+            >
+              <Share2 size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Center Play/Pause Overlay */}
+        <AnimatePresence>
+          {!isPlaying && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none"
+            >
+              <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center">
+                <Play size={40} fill="white" className="text-white ml-2" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Bottom Progress Bar */}
+        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/10 overflow-hidden">
+          <motion.div
+            className="h-full bg-[#C5A059]"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </motion.div>
   );
 }

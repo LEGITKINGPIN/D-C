@@ -119,5 +119,32 @@ export const siteConfig = {
     { name: "Vogue", logo: "brands/Vogue.webp" },
     { name: "Birkenstock", logo: "brands/Birkenstock.jpg" },
     { name: "Flirtatious", logo: "brands/Flirtatious.png" },
+    { name: "Birkenstock", logo: "brands/Birkenstock.jpg" },
+  ],
+  clips: [
+    {
+      id: "c1",
+      title: "Summer Motion",
+      video: "work/Brand/FixMyCurls/playlist.m3u8",
+      category: "Fashion"
+    },
+    {
+      id: "c2",
+      title: "Brand Story",
+      video: "work/Brand/kica_HLS/playlist.m3u8",
+      category: "Lifestyle"
+    },
+    {
+      id: "c3",
+      title: "Event Glow",
+      video: "work/events/RhythmicDandiya/playlist.m3u8",
+      category: "Event"
+    },
+    {
+      id: "c4",
+      title: "Cinema Soul",
+      video: "work/commercial/VARSHA_STORY/playlist.m3u8",
+      category: "Art"
+    }
   ]
 };
