@@ -1,4 +1,4 @@
-import { Navbar, Hero, BrandStrip, PortfolioGrid, FeaturedCarousel, ClipsLayout, Gallery, Contact } from "./components/SiteComponents";
+import { Navbar, Hero, BrandStrip, PortfolioGrid, FeaturedCarousel, /* ClipsLayout, */ Gallery, Contact } from "./components/SiteComponents";
 
 export default function App() {
   return (
@@ -9,7 +9,7 @@ export default function App() {
         <BrandStrip />
         <PortfolioGrid />
         <FeaturedCarousel />
-        <ClipsLayout />
+        {/* <ClipsLayout /> — Visual Notes: commented out, undecided */}
         <Gallery />
         <Contact />
       </main>
