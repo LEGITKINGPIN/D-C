@@ -1,4 +1,4 @@
-import { Navbar, Hero, BrandStrip, PortfolioGrid, FeaturedCarousel, /* ClipsLayout, */ Gallery, Contact } from "./components/SiteComponents";
+import { Navbar, Hero, BrandStrip, PortfolioGrid, FeaturedCarousel, Gallery, Contact } from "./components/SiteComponents";
 
 export default function App() {
   return (

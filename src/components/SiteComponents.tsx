@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect, useRef, useCallback, forwardRef, memo, useMemo, useImperativeHandle } from "react";
-import Hls from "hls.js";
+import type Hls from "hls.js";
 import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink, Volume2, VolumeX, Share2 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { siteConfig } from "../data";
@@ -34,34 +34,40 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
     }
 
     if (src.endsWith(".m3u8")) {
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          startLevel: -1,
-          enableWorker: true,
-          // Optimized for fast VOD startup & sub-3s buffering
-          maxBufferLength: 10,            // buffer 10s ahead
-          maxMaxBufferLength: 30,         // cap total buffer at 30s
-          maxBufferSize: 30 * 1000 * 1000, // 30MB max buffer memory
-          startFragPrefetch: true,        // prefetch first segment before manifest fully parsed
-          backBufferLength: 5,            // keep only 5s of back-buffer
-        });
-        hlsRef.current = hls;
-        hls.loadSource(src);
-        hls.attachMedia(video);
+      // Lazy-load hls.js only when needed (removes 521KB from critical path)
+      import("hls.js").then(({ default: HlsLib }) => {
+        // Guard: component may have unmounted during async import
+        if (!internalRef.current) return;
 
-        // autoPlay doesn't work natively with hls.js — kick-start after manifest parse
-        if (rest.autoPlay) {
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            video.play().catch(() => {});
+        if (HlsLib.isSupported()) {
+          const hls = new HlsLib({
+            startLevel: -1,
+            enableWorker: true,
+            // Optimized for fast VOD startup & sub-3s buffering
+            maxBufferLength: 10,            // buffer 10s ahead
+            maxMaxBufferLength: 30,         // cap total buffer at 30s
+            maxBufferSize: 30 * 1000 * 1000, // 30MB max buffer memory
+            startFragPrefetch: true,        // prefetch first segment before manifest fully parsed
+            backBufferLength: 5,            // keep only 5s of back-buffer
           });
+          hlsRef.current = hls;
+          hls.loadSource(src);
+          hls.attachMedia(video);
+
+          // autoPlay doesn't work natively with hls.js — kick-start after manifest parse
+          if (rest.autoPlay) {
+            hls.on(HlsLib.Events.MANIFEST_PARSED, () => {
+              video.play().catch(() => {});
+            });
+          }
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          // Safari native HLS (iOS)
+          video.src = src;
+          if (rest.autoPlay) {
+            video.play().catch(() => {});
+          }
         }
-      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        // Safari native HLS (iOS)
-        video.src = src;
-        if (rest.autoPlay) {
-          video.play().catch(() => {});
-        }
-      }
+      });
     } else {
       video.src = src;
     }
@@ -279,6 +285,7 @@ export function Navbar() {
         {/* Mobile Toggle */}
         <button
           onClick={() => setIsMenuOpen(true)}
+          aria-label="Open menu"
           className="md:hidden text-[#F8F5F0] p-2 hover:text-[#C5A059] transition-colors drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
         >
           <Menu size={24} strokeWidth={1.5} />
@@ -442,7 +449,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         >
-          <span className="text-[#C5A059] text-[10px] uppercase tracking-[0.6em] font-bold mb-8 block">
+          <span className="text-[#b8913e] text-[10px] uppercase tracking-[0.6em] font-bold mb-8 block">
             {siteConfig.hero.topline}
           </span>
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-[#F8F5F0] drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] tracking-tight mb-6 sm:mb-8 leading-[0.9] sm:leading-[0.85] font-playfair italic will-change-transform">
@@ -452,7 +459,7 @@ export function Hero() {
             {siteConfig.hero.subheadline}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center drop-shadow-lg scale-90 sm:scale-100">
-            <a href={siteConfig.hero.primaryButton.link} className="w-full sm:w-auto px-10 sm:px-12 py-4 sm:py-5 bg-[#C5A059] text-white text-[10px] sm:text-[11px] uppercase tracking-[0.4em] font-medium hover:bg-[#A68546] shadow-md transition-all duration-500 whitespace-nowrap">
+            <a href={siteConfig.hero.primaryButton.link} className="w-full sm:w-auto px-10 sm:px-12 py-4 sm:py-5 bg-[#8B6F2E] text-white text-[10px] sm:text-[11px] uppercase tracking-[0.4em] font-medium hover:bg-[#A68546] shadow-md transition-all duration-500 whitespace-nowrap">
               {siteConfig.hero.primaryButton.text}
             </a>
             <a href={siteConfig.hero.secondaryButton.link} className="w-full sm:w-auto px-10 sm:px-12 py-4 sm:py-5 text-[#F8F5F0] sm:text-[#2D2926] text-[10px] sm:text-[11px] uppercase tracking-[0.4em] font-medium hover:text-[#C5A059] transition-all duration-500 whitespace-nowrap">
@@ -548,7 +555,7 @@ export const BrandStrip = memo(function BrandStrip() {
       <div className="max-w-7xl mx-auto px-8">
         <div className="flex items-center justify-center gap-4">
           <div className="h-[1px] w-6 md:w-8 bg-[#C5A059]/20" />
-          <p className="text-[#2D2926]/40 text-[8px] md:text-[9px] uppercase tracking-[0.6em] font-bold text-center -mr-[0.6em]">
+          <p className="text-[#2D2926]/70 text-[8px] md:text-[9px] uppercase tracking-[0.6em] font-bold text-center -mr-[0.6em]">
             Trusted by Industry Leaders
           </p>
           <div className="h-[1px] w-6 md:w-8 bg-[#C5A059]/20" />
@@ -579,7 +586,7 @@ export function PortfolioGrid() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 md:mb-24 gap-8 md:gap-12">
           <div className="max-w-xl">
-            <h2 className="text-[#C5A059] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Selected Works</h2>
+            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Selected Works</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Crafting visual legacies.</h3>
           </div>
           <div className="flex flex-wrap gap-2 md:gap-3">
@@ -588,10 +595,10 @@ export function PortfolioGrid() {
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={cn(
-                  "text-[9px] uppercase tracking-[0.3em] px-6 md:px-8 py-3 md:py-4 border transition-all duration-500 font-bold",
-                  activeCategory === cat
-                    ? "bg-[#C5A059] text-white border-[#C5A059]"
-                    : "text-[#2D2926]/30 border-[#2D2926]/5 hover:border-[#2D2926]/20 hover:text-[#2D2926]"
+                   "text-[9px] uppercase tracking-[0.3em] px-6 md:px-8 py-3 md:py-4 border transition-all duration-500 font-bold",
+                   activeCategory === cat
+                     ? "bg-[#8B6F2E] text-white border-[#8B6F2E]"
+                     : "text-[#2D2926]/60 border-[#2D2926]/10 hover:border-[#2D2926]/30 hover:text-[#2D2926]"
                 )}
               >
                 {cat}
@@ -629,7 +636,7 @@ export function PortfolioGrid() {
             href={siteConfig.playbook.main}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 px-12 py-5 border border-[#2D2926]/10 text-[#2D2926]/50 text-[10px] uppercase tracking-[0.4em] font-bold hover:bg-[#C5A059] hover:text-white hover:border-[#C5A059] transition-all duration-500 group"
+            className="flex items-center gap-3 px-12 py-5 border border-[#2D2926]/20 text-[#2D2926]/70 text-[10px] uppercase tracking-[0.4em] font-bold hover:bg-[#8B6F2E] hover:text-white hover:border-[#8B6F2E] transition-all duration-500 group"
           >
             View Full Portfolio
             <ExternalLink size={14} className="group-hover:translate-x-1 transition-transform duration-300" />
@@ -903,7 +910,7 @@ export function FeaturedCarousel() {
       <div className="max-w-7xl mx-auto px-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8">
           <div>
-            <h2 className="text-[#C5A059] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Featured Films</h2>
+            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Featured Films</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">The Director's Cut</h3>
           </div>
           <div className="flex gap-2 md:gap-3">
@@ -911,9 +918,10 @@ export function FeaturedCarousel() {
               <button
                 key={idx}
                 onClick={() => setCurrentIndex(idx)}
+                aria-label={`Film ${idx + 1}`}
                 className={cn(
                   "w-8 md:w-16 h-[2px] transition-all duration-700",
-                  currentIndex === idx ? "bg-[#C5A059]" : "bg-[#2D2926]/10"
+                  currentIndex === idx ? "bg-[#8B6F2E]" : "bg-[#2D2926]/10"
                 )}
               />
             ))}
@@ -998,10 +1006,10 @@ export const Gallery = memo(function Gallery() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 md:mb-24 gap-8 md:gap-12">
           <div className="max-w-xl">
-            <h2 className="text-[#C5A059] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Visual Journal</h2>
+            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Visual Journal</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Collaborations.</h3>
           </div>
-          <p className="text-[#2D2926]/30 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right">
+          <p className="text-[#2D2926]/60 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right">
             A collection of frames captured across the globe.
           </p>
         </div>
@@ -1021,6 +1029,8 @@ export const Gallery = memo(function Gallery() {
                 alt={`Gallery ${idx}`}
                 loading="lazy"
                 decoding="async"
+                width={600}
+                height={800}
                 className="w-full h-auto object-cover transition-transform duration-1000 will-change-transform group-hover:scale-110"
                 referrerPolicy="no-referrer"
               />
@@ -1083,7 +1093,7 @@ export function Contact() {
             transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
             viewport={{ once: true }}
           >
-            <span className="text-[#C5A059] text-[10px] uppercase tracking-[0.8em] font-bold mb-8 block">
+            <span className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.8em] font-bold mb-8 block">
               Collaboration
             </span>
             <h2 className="text-5xl md:text-9xl font-bold text-[#2D2926] tracking-tighter mb-8 leading-[0.8] font-serif italic">
@@ -1112,7 +1122,7 @@ export function Contact() {
             </div>
 
             <div className="space-y-4 pt-6">
-              <p className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/40">Quick Connect</p>
+              <p className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70">Quick Connect</p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <a
                   href={siteConfig.contact.whatsapp}
@@ -1171,20 +1181,20 @@ export function Contact() {
                 <input type="hidden" name="_template" value="table" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/40 ml-1">First name</label>
+                    <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">First name</label>
                     <input type="text" name="first_name" required placeholder="Saksham" className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/40 ml-1">Last name</label>
+                    <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">Last name</label>
                     <input type="text" name="last_name" required placeholder="Chaudhary" className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/40 ml-1">Email</label>
+                  <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">Email</label>
                   <input type="email" name="email" required placeholder="you@example.com" className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/40 ml-1">Message</label>
+                  <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">Message</label>
                   <textarea name="message" required rows={4} placeholder="Hi! I'd love to chat about..." className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all resize-none" />
                 </div>
                 <button type="submit" className="w-full py-5 bg-[#2D2926] text-white text-[10px] uppercase tracking-[0.5em] font-bold rounded-xl hover:bg-[#C5A059] hover:shadow-xl hover:shadow-[#C5A059]/20 transition-all duration-500 flex items-center justify-center gap-3">
@@ -1196,7 +1206,7 @@ export function Contact() {
         </div>
 
         {/* Footer */}
-        <div className="mt-48 pt-12 border-t border-[#2D2926]/5 text-center text-[#2D2926]/40 text-[9px] uppercase tracking-[0.4em] font-bold">
+        <div className="mt-48 pt-12 border-t border-[#2D2926]/5 text-center text-[#2D2926]/70 text-[9px] uppercase tracking-[0.4em] font-bold">
           <p>© {new Date().getFullYear()} {siteConfig.name} Studios. All Rights Reserved.</p>
         </div>
       </div>
@@ -1214,10 +1224,10 @@ export function ClipsLayout() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-16 md:mb-24 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
           <div className="max-w-xl">
-            <h2 className="text-[#C5A059] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Shorts</h2>
+            <h2 className="text-[#d4b46a] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Shorts</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#F8F5F0] tracking-tight font-serif leading-none italic">Visual Notes.</h3>
           </div>
-          <p className="text-[#F8F5F0]/30 text-[9px] uppercase tracking-[0.4em] font-bold max-w-[200px] md:text-right leading-loose">
+          <p className="text-[#F8F5F0]/60 text-[9px] uppercase tracking-[0.4em] font-bold max-w-[200px] md:text-right leading-loose">
             VERTICAL STORYTELLING FOR THE MODERN SCREEN.
           </p>
         </div>
