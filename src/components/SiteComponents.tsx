@@ -57,14 +57,14 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
           // autoPlay doesn't work natively with hls.js — kick-start after manifest parse
           if (rest.autoPlay) {
             hls.on(HlsLib.Events.MANIFEST_PARSED, () => {
-              video.play().catch(() => {});
+              video.play().catch(() => { });
             });
           }
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
           // Safari native HLS (iOS)
           video.src = src;
           if (rest.autoPlay) {
-            video.play().catch(() => {});
+            video.play().catch(() => { });
           }
         }
       });
@@ -518,49 +518,49 @@ export const BrandStrip = memo(function BrandStrip() {
       {/* Top overlap strip to eliminate any seam between Hero and BrandStrip */}
       <div className="absolute top-0 left-0 right-0 h-2 bg-white -translate-y-full" />
       <div className="py-16 md:py-24 relative">
-      <div className="relative mb-12 md:mb-16">
-        <div className="absolute inset-y-0 left-0 w-24 md:w-64 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
-        <div className="absolute inset-y-0 right-0 w-24 md:w-64 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+        <div className="relative mb-12 md:mb-16">
+          <div className="absolute inset-y-0 left-0 w-24 md:w-64 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 w-24 md:w-64 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
 
-        <div className="flex overflow-hidden">
-          <motion.div
-            animate={{ x: ["-33.33%", "0%"] }}
-            transition={{
-              duration: 40,
-              repeat: Infinity,
-              ease: "linear"
-            }}
-            className="flex gap-12 md:gap-24 items-center whitespace-nowrap px-12"
-          >
-            {brands.map((brand, idx) => (
-              <div key={`${brand.name}-${idx}`} className="flex-shrink-0 cursor-pointer">
-                <div className="w-16 h-16 md:w-24 md:h-24 flex items-center justify-center rounded-full overflow-hidden shadow-sm border border-[#2D2926]/5">
-                  <img
-                    src={brand.logo}
-                    alt={brand.name}
-                    loading="lazy"
-                    decoding="async"
-                    width={96}
-                    height={96}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
+          <div className="flex overflow-hidden">
+            <motion.div
+              animate={{ x: ["-33.33%", "0%"] }}
+              transition={{
+                duration: 40,
+                repeat: Infinity,
+                ease: "linear"
+              }}
+              className="flex gap-12 md:gap-24 items-center whitespace-nowrap px-12"
+            >
+              {brands.map((brand, idx) => (
+                <div key={`${brand.name}-${idx}`} className="flex-shrink-0 cursor-pointer">
+                  <div className="w-16 h-16 md:w-24 md:h-24 flex items-center justify-center rounded-full overflow-hidden shadow-sm border border-[#2D2926]/5">
+                    <img
+                      src={brand.logo}
+                      alt={brand.name}
+                      loading="lazy"
+                      decoding="async"
+                      width={96}
+                      height={96}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </motion.div>
+              ))}
+            </motion.div>
+          </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-8">
-        <div className="flex items-center justify-center gap-4">
-          <div className="h-[1px] w-6 md:w-8 bg-[#C5A059]/20" />
-          <p className="text-[#2D2926]/70 text-[8px] md:text-[9px] uppercase tracking-[0.6em] font-bold text-center -mr-[0.6em]">
-            Trusted by Industry Leaders
-          </p>
-          <div className="h-[1px] w-6 md:w-8 bg-[#C5A059]/20" />
+        <div className="max-w-7xl mx-auto px-8">
+          <div className="flex items-center justify-center gap-4">
+            <div className="h-[1px] w-6 md:w-8 bg-[#C5A059]/20" />
+            <p className="text-[#2D2926]/70 text-[8px] md:text-[9px] uppercase tracking-[0.6em] font-bold text-center -mr-[0.6em]">
+              Trusted by Industry Leaders
+            </p>
+            <div className="h-[1px] w-6 md:w-8 bg-[#C5A059]/20" />
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );
@@ -595,10 +595,10 @@ export function PortfolioGrid() {
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={cn(
-                   "text-[9px] uppercase tracking-[0.3em] px-6 md:px-8 py-3 md:py-4 border transition-all duration-500 font-bold",
-                   activeCategory === cat
-                     ? "bg-[#8B6F2E] text-white border-[#8B6F2E]"
-                     : "text-[#2D2926]/60 border-[#2D2926]/10 hover:border-[#2D2926]/30 hover:text-[#2D2926]"
+                  "text-[9px] uppercase tracking-[0.3em] px-6 md:px-8 py-3 md:py-4 border transition-all duration-500 font-bold",
+                  activeCategory === cat
+                    ? "bg-[#8B6F2E] text-white border-[#8B6F2E]"
+                    : "text-[#2D2926]/60 border-[#2D2926]/10 hover:border-[#2D2926]/30 hover:text-[#2D2926]"
                 )}
               >
                 {cat}
@@ -814,7 +814,7 @@ const FilmSlide = memo(function FilmSlide({
     if (isGlobalPaused) {
       video.pause();
     } else {
-      video.play().catch(() => {});
+      video.play().catch(() => { });
     }
   }, [isGlobalPaused]);
 
@@ -822,7 +822,7 @@ const FilmSlide = memo(function FilmSlide({
   const handleCanPlay = useCallback(() => {
     const video = videoRef.current;
     if (video && !isGlobalPaused) {
-      video.play().catch(() => {});
+      video.play().catch(() => { });
     }
   }, [isGlobalPaused]);
 
@@ -1007,7 +1007,7 @@ export const Gallery = memo(function Gallery() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 md:mb-24 gap-8 md:gap-12">
           <div className="max-w-xl">
             <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Visual Journal</h2>
-            <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Collaborations.</h3>
+            <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Halcyon.</h3>
           </div>
           <p className="text-[#2D2926]/60 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right">
             A collection of frames captured across the globe.
@@ -1271,7 +1271,7 @@ function ClipsPreview({ video }: { video: string }) {
 
   useEffect(() => {
     if (inView && videoRef.current) {
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch(() => { });
     } else if (videoRef.current) {
       videoRef.current.pause();
     }
@@ -1312,7 +1312,7 @@ function VerticalVideoPlayer({ src, onClose }: { src: string; onClose: () => voi
       navigator.share({
         title: "D&C MediaHouse Clip",
         url: window.location.href,
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
