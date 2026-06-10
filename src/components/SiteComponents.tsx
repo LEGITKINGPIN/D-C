@@ -1,5 +1,5 @@
 import { motion, AnimatePresence, useScroll, useTransform } from "motion/react";
-import { useState, useEffect, useRef, useCallback, forwardRef, memo, useMemo, useImperativeHandle } from "react";
+import React, { useState, useEffect, useRef, useCallback, forwardRef, memo, useMemo, useImperativeHandle } from "react";
 import type Hls from "hls.js";
 import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink, Volume2, VolumeX, Share2 } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -1024,7 +1024,7 @@ export const Gallery = memo(function Gallery() {
 
   const GalleryCard = ({ img, idx, label }: { img: string; idx: number; label: string }) => (
     <div
-      className="flex-shrink-0 w-[220px] h-[160px] sm:w-[280px] sm:h-[200px] md:w-[380px] md:h-[270px] lg:w-[420px] lg:h-[300px] rounded-2xl md:rounded-3xl overflow-hidden cursor-zoom-in group relative bg-[#2D2926] shadow-lg hover:shadow-2xl hover:shadow-black/20 transition-all duration-500"
+      className="flex-shrink-0 w-[200px] h-[130px] sm:w-[260px] sm:h-[160px] md:w-[350px] md:h-[190px] lg:w-[400px] lg:h-[220px] rounded-2xl md:rounded-3xl overflow-hidden cursor-zoom-in group relative bg-[#2D2926] shadow-lg hover:shadow-2xl hover:shadow-black/20 transition-all duration-500"
       onClick={() => setSelectedImage(img)}
     >
       <img
@@ -1050,10 +1050,10 @@ export const Gallery = memo(function Gallery() {
       {/* Sticky viewport — pinned while scrolling through 300vh runway */}
       <motion.div
         style={{ scale, opacity }}
-        className="sticky top-0 h-screen flex flex-col justify-center overflow-hidden will-change-transform"
+        className="sticky top-0 h-screen flex flex-col justify-end pb-12 overflow-hidden will-change-transform"
       >
         {/* Section Header */}
-        <div className="px-6 md:px-12 mb-6 md:mb-10 pt-16 md:pt-20">
+        <div className="px-6 md:px-12 mb-4 md:mb-6 pt-8 md:pt-12">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-8">
             <div>
               <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-3 md:mb-5">Visual Journal</h2>
@@ -1066,7 +1066,7 @@ export const Gallery = memo(function Gallery() {
         </div>
 
         {/* Three Alternating Horizontal Rows */}
-        <div className="flex flex-col gap-4 md:gap-5">
+        <div className="flex flex-col gap-3 md:gap-4">
           {/* Row 1 — Left to Right */}
           <motion.div style={{ x: x1 }} className="flex gap-4 md:gap-5 will-change-transform">
             {row1.map((img, idx) => (
@@ -1089,15 +1089,7 @@ export const Gallery = memo(function Gallery() {
           </motion.div>
         </div>
 
-        {/* Scroll hint at bottom */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[#2D2926]/30">
-          <span className="text-[8px] uppercase tracking-[0.5em] font-bold">Scroll to explore</span>
-          <motion.div
-            animate={{ y: [0, 6, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="w-[1px] h-6 bg-[#2D2926]/20"
-          />
-        </div>
+        {/* Scroll hint removed — scroll behavior is self-evident */}
       </motion.div>
 
       {/* Lightbox Modal */}
