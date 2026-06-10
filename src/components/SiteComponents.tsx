@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useScroll, useTransform } from "motion/react";
 import { useState, useEffect, useRef, useCallback, forwardRef, memo, useMemo, useImperativeHandle } from "react";
 import type Hls from "hls.js";
 import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink, Volume2, VolumeX, Share2 } from "lucide-react";
@@ -993,52 +993,114 @@ export function FeaturedCarousel() {
   );
 }
 
-// --- Gallery Section ---
+// --- Gallery Section (Scroll-Driven Alternating Rows) ---
 export const Gallery = memo(function Gallery() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const { ref, inView } = useInView({
-    triggerOnce: true,
-    threshold: 0.1,
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"],
   });
 
+  // Split 24 images into 3 rows of 8
+  const images = siteConfig.gallery;
+  const rowSize = Math.ceil(images.length / 3);
+  const row1 = images.slice(0, rowSize);
+  const row2 = images.slice(rowSize, rowSize * 2);
+  const row3 = images.slice(rowSize * 2);
+
+  // Alternating horizontal translation driven by vertical scroll
+  // Row 1 → slides right (left-to-right)
+  const x1 = useTransform(scrollYProgress, [0, 1], ["-25%", "5%"]);
+  // Row 2 → slides left (right-to-left)
+  const x2 = useTransform(scrollYProgress, [0, 1], ["5%", "-25%"]);
+  // Row 3 → slides right (left-to-right)
+  const x3 = useTransform(scrollYProgress, [0, 1], ["-25%", "5%"]);
+
+  // Subtle parallax scale for depth
+  const scale = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0.92, 1, 1, 0.92]);
+  const opacity = useTransform(scrollYProgress, [0, 0.15, 0.85, 1], [0, 1, 1, 0]);
+
+  const GalleryCard = ({ img, idx, label }: { img: string; idx: number; label: string }) => (
+    <div
+      className="flex-shrink-0 w-[220px] h-[160px] sm:w-[280px] sm:h-[200px] md:w-[380px] md:h-[270px] lg:w-[420px] lg:h-[300px] rounded-2xl md:rounded-3xl overflow-hidden cursor-zoom-in group relative bg-[#2D2926] shadow-lg hover:shadow-2xl hover:shadow-black/20 transition-all duration-500"
+      onClick={() => setSelectedImage(img)}
+    >
+      <img
+        src={img}
+        alt={`Gallery ${label}`}
+        loading="lazy"
+        decoding="async"
+        className="w-full h-full object-cover transition-transform duration-700 will-change-transform group-hover:scale-110"
+      />
+      {/* Hover overlay with subtle gold border glow */}
+      <div className="absolute inset-0 rounded-2xl md:rounded-3xl border-2 border-transparent group-hover:border-[#C5A059]/30 transition-all duration-500" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    </div>
+  );
+
   return (
-    <section id="gallery" className="py-20 md:py-32 bg-[#F5F2ED] px-6 md:px-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 md:mb-24 gap-8 md:gap-12">
-          <div className="max-w-xl">
-            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Visual Journal</h2>
-            <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Halcyon.</h3>
+    <section
+      id="gallery"
+      ref={sectionRef}
+      className="relative bg-[#F5F2ED]"
+      style={{ height: "300vh" }}
+    >
+      {/* Sticky viewport — pinned while scrolling through 300vh runway */}
+      <motion.div
+        style={{ scale, opacity }}
+        className="sticky top-0 h-screen flex flex-col justify-center overflow-hidden will-change-transform"
+      >
+        {/* Section Header */}
+        <div className="px-6 md:px-12 mb-6 md:mb-10 pt-16 md:pt-20">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-8">
+            <div>
+              <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-3 md:mb-5">Visual Journal</h2>
+              <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Halcyon.</h3>
+            </div>
+            <p className="text-[#2D2926]/50 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right leading-relaxed">
+              A collection of frames captured across the globe.
+            </p>
           </div>
-          <p className="text-[#2D2926]/60 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right">
-            A collection of frames captured across the globe.
-          </p>
         </div>
 
-        <div ref={ref} className="columns-2 md:columns-3 lg:columns-4 gap-6 space-y-6">
-          {siteConfig.gallery.map((img, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 30 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, delay: Math.min(idx * 0.06, 0.6), ease: [0.22, 1, 0.36, 1] }}
-              className="break-inside-avoid overflow-hidden group bg-white border border-[#2D2926]/5 rounded-2xl md:rounded-[2rem] cursor-zoom-in"
-              onClick={() => setSelectedImage(img)}
-            >
-              <img
-                src={img}
-                alt={`Gallery ${idx}`}
-                loading="lazy"
-                decoding="async"
-                width={600}
-                height={800}
-                className="w-full h-auto object-cover transition-transform duration-1000 will-change-transform group-hover:scale-110"
-                referrerPolicy="no-referrer"
-              />
-            </motion.div>
-          ))}
-        </div>
-      </div>
+        {/* Three Alternating Horizontal Rows */}
+        <div className="flex flex-col gap-4 md:gap-5">
+          {/* Row 1 — Left to Right */}
+          <motion.div style={{ x: x1 }} className="flex gap-4 md:gap-5 will-change-transform">
+            {row1.map((img, idx) => (
+              <GalleryCard key={`r1-${idx}`} img={img} idx={idx} label={`${idx + 1}`} />
+            ))}
+          </motion.div>
 
+          {/* Row 2 — Right to Left */}
+          <motion.div style={{ x: x2 }} className="flex gap-4 md:gap-5 will-change-transform">
+            {row2.map((img, idx) => (
+              <GalleryCard key={`r2-${idx}`} img={img} idx={idx} label={`${rowSize + idx + 1}`} />
+            ))}
+          </motion.div>
+
+          {/* Row 3 — Left to Right */}
+          <motion.div style={{ x: x3 }} className="flex gap-4 md:gap-5 will-change-transform">
+            {row3.map((img, idx) => (
+              <GalleryCard key={`r3-${idx}`} img={img} idx={idx} label={`${rowSize * 2 + idx + 1}`} />
+            ))}
+          </motion.div>
+        </div>
+
+        {/* Scroll hint at bottom */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[#2D2926]/30">
+          <span className="text-[8px] uppercase tracking-[0.5em] font-bold">Scroll to explore</span>
+          <motion.div
+            animate={{ y: [0, 6, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="w-[1px] h-6 bg-[#2D2926]/20"
+          />
+        </div>
+      </motion.div>
+
+      {/* Lightbox Modal */}
       <AnimatePresence>
         {selectedImage && (
           <motion.div
