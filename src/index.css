@@ -64,6 +64,7 @@ body {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
@@ -92,10 +93,12 @@ body {
 .gallery-marquee-right:hover {
   animation-play-state: paused;
 }
-
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
