@@ -16,6 +16,8 @@ export default defineConfig({
     target: 'es2020',
     // Use lightningcss for faster CSS minification
     cssMinify: 'lightningcss',
+    // Inline CSS into HTML (total CSS is ~10KB, saves a render-blocking request)
+    cssCodeSplit: false,
     // Inline assets < 4KB as base64 (saves HTTP requests for small images)
     assetsInlineLimit: 4096,
     // Manual chunk splitting for parallel loading & better caching
@@ -24,7 +26,8 @@ export default defineConfig({
         manualChunks: {
           // Separate heavy libs into their own chunks for parallel download
           'vendor-react': ['react', 'react-dom'],
-          'vendor-hls': ['hls.js'],
+          // hls.js is NOT listed here — it's dynamically imported via import('hls.js')
+          // so Vite code-splits it automatically without modulepreloading it
           'vendor-motion': ['motion'],
         },
       },

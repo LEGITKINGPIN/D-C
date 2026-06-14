@@ -43,12 +43,12 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
           const hls = new HlsLib({
             startLevel: -1,
             enableWorker: true,
-            // Optimized for fast VOD startup & sub-3s buffering
-            maxBufferLength: 10,            // buffer 10s ahead
-            maxMaxBufferLength: 30,         // cap total buffer at 30s
-            maxBufferSize: 30 * 1000 * 1000, // 30MB max buffer memory
-            startFragPrefetch: true,        // prefetch first segment before manifest fully parsed
-            backBufferLength: 5,            // keep only 5s of back-buffer
+            // Aggressive buffer limits to minimize network payload
+            maxBufferLength: 3,             // buffer only 3s ahead (was 10)
+            maxMaxBufferLength: 8,          // cap at 8s (was 30)
+            maxBufferSize: 5 * 1000 * 1000, // 5MB max buffer memory (was 30MB)
+            startFragPrefetch: false,       // don't prefetch — wait for play intent
+            backBufferLength: 0,            // zero back-buffer for muted previews
           });
           hlsRef.current = hls;
           hls.loadSource(src);
@@ -82,14 +82,19 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
 
   // iOS Safari requires these attributes to allow inline playback
   // and prevent the native QuickTime fullscreen player from hijacking
+  // Destructure children so they pass through to <video> (e.g. <track> for a11y)
+  const { children: videoChildren, ...videoRest } = rest;
+
   return (
     <video
       ref={internalRef}
-      {...rest}
+      {...videoRest}
       playsInline
       // @ts-ignore – webkit vendor attribute for older iOS
       webkit-playsinline="true"
-    />
+    >
+      {videoChildren}
+    </video>
   );
 });
 
@@ -438,7 +443,9 @@ export function Hero() {
         className="absolute inset-0 w-full h-full object-cover will-change-transform"
         onContextMenu={(e) => e.preventDefault()}
         controlsList="nodownload"
-      />
+      >
+        <track kind="captions" />
+      </HlsVideo>
 
       <div className={cn(
         "relative z-10 text-center px-4 max-w-5xl mt-20 transition-all duration-1000",
@@ -581,7 +588,7 @@ export function PortfolioGrid() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-16 md:mb-24">
           <div className="max-w-xl">
-            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Selected Works</h2>
+            <h2 className="text-[#7A6127] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Selected Works</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Crafting visual legacies.</h3>
           </div>
         </div>
@@ -889,7 +896,7 @@ export function FeaturedCarousel() {
       <div className="max-w-7xl mx-auto px-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8">
           <div>
-            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Featured Films</h2>
+            <h2 className="text-[#7A6127] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Featured Films</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">The Director's Cut</h3>
           </div>
           <div className="flex gap-2 md:gap-3">
@@ -984,6 +991,8 @@ const GalleryCard = memo(function GalleryCard({ img, label, onClick }: { img: st
         alt={`Gallery ${label}`}
         loading="lazy"
         decoding="async"
+        width={400}
+        height={220}
         className="w-full h-full object-cover transition-transform duration-700 will-change-transform group-hover:scale-110"
       />
       <div className="absolute inset-0 rounded-2xl md:rounded-3xl border-2 border-transparent group-hover:border-[#C5A059]/30 transition-all duration-500" />
@@ -1266,10 +1275,10 @@ export const Gallery = memo(function Gallery() {
       <div className="px-6 md:px-12 mb-8 md:mb-12">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-8">
           <div>
-            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-3 md:mb-5">Visual Journal</h2>
+            <h2 className="text-[#7A6127] text-[10px] uppercase tracking-[0.6em] font-bold mb-3 md:mb-5">Visual Journal</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Halcyon.</h3>
           </div>
-          <p className="text-[#2D2926]/50 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right leading-relaxed">
+          <p className="text-[#2D2926]/60 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right leading-relaxed">
             A collection of frames captured across the globe.
           </p>
         </div>
@@ -1312,7 +1321,7 @@ export const Contact = memo(function Contact() {
             transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
             viewport={{ once: true }}
           >
-            <span className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.8em] font-bold mb-8 block">
+            <span className="text-[#7A6127] text-[10px] uppercase tracking-[0.8em] font-bold mb-8 block">
               Collaboration
             </span>
             <h2 className="text-5xl md:text-9xl font-bold text-[#2D2926] tracking-tighter mb-8 leading-[0.8] font-serif italic">
@@ -1443,10 +1452,10 @@ export const ClipsLayout = memo(function ClipsLayout() {
       <div className="max-w-[1600px] mx-auto">
         <div className="mb-16 md:mb-24 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
           <div className="max-w-xl">
-            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Shorts</h2>
+            <h2 className="text-[#7A6127] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Shorts</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none italic">Visual Notes.</h3>
           </div>
-          <p className="text-[#2D2926]/50 text-[9px] uppercase tracking-[0.4em] font-bold max-w-[200px] md:text-right leading-loose">
+          <p className="text-[#2D2926]/60 text-[9px] uppercase tracking-[0.4em] font-bold max-w-[200px] md:text-right leading-loose">
             VERTICAL STORYTELLING FOR THE MODERN SCREEN.
           </p>
         </div>
@@ -1516,6 +1525,13 @@ const ClipCard = memo(function ClipCard({ clip, onOpen }: { clip: any; onOpen: (
 const ClipsPreview = memo(function ClipsPreview({ video, shouldPlay }: { video: string; shouldPlay: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Lazy load: only mount HLS source when near viewport
+  const { ref: lazyRef, inView: isNearViewport } = useInView({
+    threshold: 0,
+    triggerOnce: true,
+    rootMargin: "200px",
+  });
+
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid) return;
@@ -1537,15 +1553,17 @@ const ClipsPreview = memo(function ClipsPreview({ video, shouldPlay }: { video: 
   }, []);
 
   return (
-    <div className="w-full h-full">
-      <HlsVideo
-        ref={videoRef}
-        src={video}
-        muted
-        loop
-        playsInline
-        className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-700"
-      />
+    <div ref={lazyRef} className="w-full h-full">
+      {isNearViewport && (
+        <HlsVideo
+          ref={videoRef}
+          src={video}
+          muted
+          loop
+          playsInline
+          className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-700"
+        />
+      )}
     </div>
   );
 });
