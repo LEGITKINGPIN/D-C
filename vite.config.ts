@@ -14,6 +14,8 @@ export default defineConfig({
   build: {
     // Target modern browsers for smaller output
     target: 'es2020',
+    // Use lightningcss for faster CSS minification
+    cssMinify: 'lightningcss',
     // Inline assets < 4KB as base64 (saves HTTP requests for small images)
     assetsInlineLimit: 4096,
     // Manual chunk splitting for parallel loading & better caching
@@ -29,5 +31,7 @@ export default defineConfig({
     },
     // Reduce chunk size warnings threshold
     chunkSizeWarningLimit: 500,
+    // Disable source maps in production for smaller bundles
+    sourcemap: false,
   },
 });

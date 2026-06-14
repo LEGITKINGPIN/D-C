@@ -1,4 +1,4 @@
-import { motion, AnimatePresence, useScroll, useTransform } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import React, { useState, useEffect, useRef, useCallback, forwardRef, memo, useMemo, useImperativeHandle } from "react";
 import type Hls from "hls.js";
 import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink, Volume2, VolumeX, Share2 } from "lucide-react";
@@ -568,14 +568,9 @@ export const BrandStrip = memo(function BrandStrip() {
 
 // --- Portfolio Grid ---
 export function PortfolioGrid() {
-  const [activeCategory, setActiveCategory] = useState("All");
   const [openVideo, setOpenVideo] = useState<string | null>(null);
-  const categories = ["All", "Event", "Brands", "Commercials"];
 
-  const filteredItems = useMemo(() => (activeCategory === "All"
-    ? siteConfig.portfolio
-    : siteConfig.portfolio.filter(item => item.category === activeCategory)
-  ).filter(item => !(item as any).isDirectorCut), [activeCategory]);
+  const filteredItems = useMemo(() => siteConfig.portfolio.filter(item => !(item as any).isDirectorCut), []);
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("videoModalState", { detail: !!openVideo }));
@@ -584,26 +579,10 @@ export function PortfolioGrid() {
   return (
     <section id="work" className="py-20 md:py-32 bg-[#F5F2ED] px-6 md:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 md:mb-24 gap-8 md:gap-12">
+        <div className="mb-16 md:mb-24">
           <div className="max-w-xl">
             <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Selected Works</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Crafting visual legacies.</h3>
-          </div>
-          <div className="flex flex-wrap gap-2 md:gap-3">
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={cn(
-                  "text-[9px] uppercase tracking-[0.3em] px-6 md:px-8 py-3 md:py-4 border transition-all duration-500 font-bold",
-                  activeCategory === cat
-                    ? "bg-[#8B6F2E] text-white border-[#8B6F2E]"
-                    : "text-[#2D2926]/60 border-[#2D2926]/10 hover:border-[#2D2926]/30 hover:text-[#2D2926]"
-                )}
-              >
-                {cat}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -903,7 +882,7 @@ export function FeaturedCarousel() {
       setCurrentIndex((prev) => (prev + 1) % items.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [items.length, isVideoModalOpen, currentIndex]);
+  }, [items.length, isVideoModalOpen]);
 
   return (
     <section id="films" className="py-32 bg-white overflow-hidden border-y border-[#2D2926]/5">
@@ -993,39 +972,12 @@ export function FeaturedCarousel() {
   );
 }
 
-// --- Gallery Section (Scroll-Driven Alternating Rows) ---
-export const Gallery = memo(function Gallery() {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const sectionRef = useRef<HTMLDivElement>(null);
-
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start end", "end start"],
-  });
-
-  // Split 24 images into 3 rows of 8
-  const images = siteConfig.gallery;
-  const rowSize = Math.ceil(images.length / 3);
-  const row1 = images.slice(0, rowSize);
-  const row2 = images.slice(rowSize, rowSize * 2);
-  const row3 = images.slice(rowSize * 2);
-
-  // Alternating horizontal translation driven by vertical scroll
-  // Row 1 → slides right (left-to-right)
-  const x1 = useTransform(scrollYProgress, [0, 1], ["-25%", "5%"]);
-  // Row 2 → slides left (right-to-left)
-  const x2 = useTransform(scrollYProgress, [0, 1], ["5%", "-25%"]);
-  // Row 3 → slides right (left-to-right)
-  const x3 = useTransform(scrollYProgress, [0, 1], ["-25%", "5%"]);
-
-  // Subtle parallax scale for depth
-  const scale = useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0.92, 1, 1, 0.92]);
-  const opacity = useTransform(scrollYProgress, [0, 0.15, 0.85, 1], [0, 1, 1, 0]);
-
-  const GalleryCard = ({ img, idx, label }: { img: string; idx: number; label: string }) => (
+// --- Gallery Card (extracted & memoized to prevent re-creation on every Gallery render) ---
+const GalleryCard = memo(function GalleryCard({ img, label, onClick }: { img: string; label: string; onClick: (img: string) => void }) {
+  return (
     <div
       className="flex-shrink-0 w-[200px] h-[130px] sm:w-[260px] sm:h-[160px] md:w-[350px] md:h-[190px] lg:w-[400px] lg:h-[220px] rounded-2xl md:rounded-3xl overflow-hidden cursor-zoom-in group relative bg-[#2D2926] shadow-lg hover:shadow-2xl hover:shadow-black/20 transition-all duration-500"
-      onClick={() => setSelectedImage(img)}
+      onClick={() => onClick(img)}
     >
       <img
         src={img}
@@ -1034,97 +986,310 @@ export const Gallery = memo(function Gallery() {
         decoding="async"
         className="w-full h-full object-cover transition-transform duration-700 will-change-transform group-hover:scale-110"
       />
-      {/* Hover overlay with subtle gold border glow */}
       <div className="absolute inset-0 rounded-2xl md:rounded-3xl border-2 border-transparent group-hover:border-[#C5A059]/30 transition-all duration-500" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
     </div>
   );
+});
+
+// --- Gallery Lightbox with Zoom & Pan ---
+const GalleryLightbox = memo(function GalleryLightbox({
+  src,
+  onClose,
+}: {
+  src: string;
+  onClose: () => void;
+}) {
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const panStart = useRef({ x: 0, y: 0 });
+  const lastPinchDist = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 5;
+
+  // Clamp zoom and reset pan when zoomed out
+  const applyZoom = useCallback((newZoom: number) => {
+    const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+    setZoom(clamped);
+    if (clamped <= 1) setPan({ x: 0, y: 0 });
+  }, []);
+
+  // --- Mouse wheel zoom ---
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.deltaY > 0 ? -0.15 : 0.15;
+      setZoom((prev) => {
+        const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev + delta));
+        if (next <= 1) setPan({ x: 0, y: 0 });
+        return next;
+      });
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // --- Mouse drag pan ---
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (zoom <= 1) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(true);
+      dragStart.current = { x: e.clientX, y: e.clientY };
+      panStart.current = { ...pan };
+    },
+    [zoom, pan]
+  );
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const onMove = (e: MouseEvent) => {
+      setPan({
+        x: panStart.current.x + (e.clientX - dragStart.current.x),
+        y: panStart.current.y + (e.clientY - dragStart.current.y),
+      });
+    };
+    const onUp = () => setIsDragging(false);
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [isDragging]);
+
+  // --- Touch: pinch-to-zoom & one-finger pan ---
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    let touchPanStart = { x: 0, y: 0 };
+    let touchDragStart = { x: 0, y: 0 };
+    let currentPan = pan;
+    let currentZoom = zoom;
+
+    const getPinchDist = (touches: TouchList) => {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.hypot(dx, dy);
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        lastPinchDist.current = getPinchDist(e.touches);
+      } else if (e.touches.length === 1 && currentZoom > 1) {
+        e.preventDefault();
+        touchDragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        touchPanStart = { ...currentPan };
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && lastPinchDist.current !== null) {
+        e.preventDefault();
+        const dist = getPinchDist(e.touches);
+        const scale = dist / lastPinchDist.current;
+        lastPinchDist.current = dist;
+        currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentZoom * scale));
+        setZoom(currentZoom);
+        if (currentZoom <= 1) {
+          currentPan = { x: 0, y: 0 };
+          setPan(currentPan);
+        }
+      } else if (e.touches.length === 1 && currentZoom > 1) {
+        e.preventDefault();
+        const newPan = {
+          x: touchPanStart.x + (e.touches[0].clientX - touchDragStart.x),
+          y: touchPanStart.y + (e.touches[0].clientY - touchDragStart.y),
+        };
+        currentPan = newPan;
+        setPan(newPan);
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) lastPinchDist.current = null;
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [zoom, pan]);
+
+  // Double-click to reset / toggle zoom
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (zoom > 1) {
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+      } else {
+        applyZoom(2.5);
+      }
+    },
+    [zoom, applyZoom]
+  );
+
+  // Close on backdrop click only when not zoomed
+  const handleBackdropClick = useCallback(() => {
+    if (zoom <= 1 && !isDragging) onClose();
+  }, [zoom, isDragging, onClose]);
 
   return (
-    <section
-      id="gallery"
-      ref={sectionRef}
-      className="relative bg-[#F5F2ED]"
-      style={{ height: "300vh" }}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2D2926]/95 backdrop-blur-xl"
     >
-      {/* Sticky viewport — pinned while scrolling through 300vh runway */}
-      <motion.div
-        style={{ scale, opacity }}
-        className="sticky top-0 h-screen flex flex-col justify-end pb-12 overflow-hidden will-change-transform"
+      <motion.button
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.5 }}
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+        className="absolute top-6 right-6 md:top-10 md:right-10 text-white/50 hover:text-white transition-all duration-300 z-[101]"
       >
-        {/* Section Header */}
-        <div className="px-6 md:px-12 mb-4 md:mb-6 pt-8 md:pt-12">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-8">
-            <div>
-              <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-3 md:mb-5">Visual Journal</h2>
-              <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Halcyon.</h3>
-            </div>
-            <p className="text-[#2D2926]/50 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right leading-relaxed">
-              A collection of frames captured across the globe.
-            </p>
-          </div>
-        </div>
+        <X size={40} strokeWidth={1.5} />
+      </motion.button>
 
-        {/* Three Alternating Horizontal Rows */}
-        <div className="flex flex-col gap-3 md:gap-4">
-          {/* Row 1 — Left to Right */}
-          <motion.div style={{ x: x1 }} className="flex gap-4 md:gap-5 will-change-transform">
-            {row1.map((img, idx) => (
-              <GalleryCard key={`r1-${idx}`} img={img} idx={idx} label={`${idx + 1}`} />
-            ))}
-          </motion.div>
-
-          {/* Row 2 — Right to Left */}
-          <motion.div style={{ x: x2 }} className="flex gap-4 md:gap-5 will-change-transform">
-            {row2.map((img, idx) => (
-              <GalleryCard key={`r2-${idx}`} img={img} idx={idx} label={`${rowSize + idx + 1}`} />
-            ))}
-          </motion.div>
-
-          {/* Row 3 — Left to Right */}
-          <motion.div style={{ x: x3 }} className="flex gap-4 md:gap-5 will-change-transform">
-            {row3.map((img, idx) => (
-              <GalleryCard key={`r3-${idx}`} img={img} idx={idx} label={`${rowSize * 2 + idx + 1}`} />
-            ))}
-          </motion.div>
-        </div>
-
-        {/* Scroll hint removed — scroll behavior is self-evident */}
+      {/* Zoom hint */}
+      <motion.div
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 0 }}
+        transition={{ delay: 2, duration: 1 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/40 text-[10px] uppercase tracking-[0.4em] font-bold z-[101] pointer-events-none"
+      >
+        Scroll to zoom · Drag to pan · Double-click to reset
       </motion.div>
 
-      {/* Lightbox Modal */}
+      <motion.div
+        ref={containerRef}
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="relative w-full h-full flex items-center justify-center overflow-hidden"
+        style={{ cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in" }}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={handleMouseDown}
+        onDoubleClick={handleDoubleClick}
+      >
+        <img
+          src={src}
+          alt="Selected Gallery Item"
+          draggable={false}
+          className="max-w-full max-h-full object-contain rounded-lg shadow-2xl select-none"
+          style={{
+            transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+            transition: isDragging ? "none" : "transform 0.2s ease-out",
+          }}
+        />
+      </motion.div>
+    </motion.div>
+  );
+});
+
+// --- Gallery Marquee Row ---
+const GalleryMarqueeRow = memo(function GalleryMarqueeRow({
+  images,
+  direction,
+  speed,
+  rowLabel,
+  onImageClick,
+}: {
+  images: string[];
+  direction: "left" | "right";
+  speed: number;
+  rowLabel: string;
+  onImageClick: (img: string) => void;
+}) {
+  // Duplicate images enough times to fill seamlessly
+  const duplicated = useMemo(() => [...images, ...images, ...images, ...images], [images]);
+
+  return (
+    <div className="overflow-hidden w-full">
+      <div
+        className={cn(
+          "flex gap-4 md:gap-5 w-max",
+          direction === "left" ? "gallery-marquee-left" : "gallery-marquee-right"
+        )}
+        style={{ "--marquee-speed": `${speed}s` } as React.CSSProperties}
+      >
+        {duplicated.map((img, idx) => (
+          <GalleryCard
+            key={`${rowLabel}-${idx}`}
+            img={img}
+            label={`${rowLabel}-${idx}`}
+            onClick={onImageClick}
+          />
+        ))}
+      </div>
+    </div>
+  );
+});
+
+// --- Gallery Section (Continuous Marquee Rows) ---
+export const Gallery = memo(function Gallery() {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Split images into 3 rows
+  const images = siteConfig.gallery;
+  const rowSize = Math.ceil(images.length / 3);
+  const row1 = useMemo(() => images.slice(0, rowSize), [images, rowSize]);
+  const row2 = useMemo(() => images.slice(rowSize, rowSize * 2), [images, rowSize]);
+  const row3 = useMemo(() => images.slice(rowSize * 2), [images, rowSize]);
+
+  const handleImageClick = useCallback((img: string) => setSelectedImage(img), []);
+
+  return (
+    <section id="gallery" className="relative bg-[#F5F2ED] py-20 md:py-32 overflow-hidden">
+      {/* Section Header */}
+      <div className="px-6 md:px-12 mb-8 md:mb-12">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-8">
+          <div>
+            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-3 md:mb-5">Visual Journal</h2>
+            <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Halcyon.</h3>
+          </div>
+          <p className="text-[#2D2926]/50 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right leading-relaxed">
+            A collection of frames captured across the globe.
+          </p>
+        </div>
+      </div>
+
+      {/* Three Continuous Marquee Rows */}
+      <div className="flex flex-col gap-3 md:gap-4">
+        <GalleryMarqueeRow images={row1} direction="left" speed={120} rowLabel="r1" onImageClick={handleImageClick} />
+        <GalleryMarqueeRow images={row2} direction="right" speed={110} rowLabel="r2" onImageClick={handleImageClick} />
+        <GalleryMarqueeRow images={row3} direction="left" speed={130} rowLabel="r3" onImageClick={handleImageClick} />
+      </div>
+
+      {/* Fade edges */}
+      <div className="absolute inset-y-0 left-0 w-16 md:w-32 bg-gradient-to-r from-[#F5F2ED] to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-y-0 right-0 w-16 md:w-32 bg-gradient-to-l from-[#F5F2ED] to-transparent z-10 pointer-events-none" />
+
+      {/* Lightbox Modal with Zoom & Pan */}
       <AnimatePresence>
         {selectedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedImage(null)}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2D2926]/95 backdrop-blur-xl p-4 md:p-12 cursor-zoom-out"
-          >
-            <motion.button
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-6 right-6 md:top-10 md:right-10 text-white/50 hover:text-white transition-all duration-300 z-[101]"
-            >
-              <X size={40} strokeWidth={1.5} />
-            </motion.button>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative w-full h-full flex items-center justify-center"
-            >
-              <img
-                src={selectedImage}
-                alt="Selected Gallery Item"
-                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-              />
-            </motion.div>
-          </motion.div>
+          <GalleryLightbox src={selectedImage} onClose={() => setSelectedImage(null)} />
         )}
       </AnimatePresence>
     </section>
@@ -1133,7 +1298,7 @@ export const Gallery = memo(function Gallery() {
 
 
 // --- Merged Contact Section ---
-export function Contact() {
+export const Contact = memo(function Contact() {
   const [submitted, setSubmitted] = useState(false);
 
   return (
@@ -1266,43 +1431,33 @@ export function Contact() {
       </div>
     </section>
   );
-}
+});
 
 // --- Clips Layout (Vertical Videos) ---
-export function ClipsLayout() {
+export const ClipsLayout = memo(function ClipsLayout() {
   const [activeClip, setActiveClip] = useState<string | null>(null);
   const clips = (siteConfig as any).clips || [];
 
   return (
-    <section id="clips" className="py-24 md:py-32 bg-[#2D2926] px-6 md:px-8 overflow-hidden rounded-[3rem] md:rounded-[5rem] mb-20 relative z-10 mx-4 md:mx-8">
-      <div className="max-w-7xl mx-auto">
+    <section id="work" className="py-24 md:py-40 bg-[#F5F2ED] px-6 md:px-12 lg:px-16 overflow-hidden relative z-10">
+      <div className="max-w-[1600px] mx-auto">
         <div className="mb-16 md:mb-24 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
           <div className="max-w-xl">
-            <h2 className="text-[#d4b46a] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Shorts</h2>
-            <h3 className="text-4xl md:text-7xl font-bold text-[#F8F5F0] tracking-tight font-serif leading-none italic">Visual Notes.</h3>
+            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Shorts</h2>
+            <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none italic">Visual Notes.</h3>
           </div>
-          <p className="text-[#F8F5F0]/60 text-[9px] uppercase tracking-[0.4em] font-bold max-w-[200px] md:text-right leading-loose">
+          <p className="text-[#2D2926]/50 text-[9px] uppercase tracking-[0.4em] font-bold max-w-[200px] md:text-right leading-loose">
             VERTICAL STORYTELLING FOR THE MODERN SCREEN.
           </p>
         </div>
 
-        <div className="flex gap-4 md:gap-10 overflow-x-auto pb-12 scrollbar-none snap-x -mx-6 px-6 md:mx-0 md:px-0">
+        <div className="flex md:grid md:grid-cols-4 gap-5 md:gap-8 overflow-x-auto md:overflow-visible pb-4 md:pb-0 snap-x md:snap-none -mx-6 px-6 md:mx-0 md:px-0">
           {clips.map((clip: any) => (
-            <motion.div
+            <ClipCard
               key={clip.id}
-              whileHover={{ y: -10 }}
-              className="flex-shrink-0 w-[280px] md:w-[320px] aspect-[9/16] bg-black rounded-[2.5rem] overflow-hidden relative group cursor-pointer snap-center border border-white/5 shadow-2xl"
-              onClick={() => setActiveClip(clip.video)}
-            >
-              <ClipsPreview video={clip.video} />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-10 translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                <p className="text-[#C5A059] text-[8px] uppercase tracking-[0.4em] font-bold mb-3">{clip.category}</p>
-                <h4 className="text-2xl font-bold text-white font-serif italic tracking-tight">{clip.title}</h4>
-              </div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 scale-75 group-hover:scale-100 border border-white/10 shadow-2xl">
-                <Play size={24} fill="white" className="text-white ml-1.5" />
-              </div>
-            </motion.div>
+              clip={clip}
+              onOpen={() => setActiveClip(clip.video)}
+            />
           ))}
         </div>
       </div>
@@ -1317,22 +1472,72 @@ export function ClipsLayout() {
       </AnimatePresence>
     </section>
   );
-}
+});
 
-function ClipsPreview({ video }: { video: string }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const { ref, inView } = useInView({ threshold: 0.1 });
+// --- Clip Card (hover-to-play on desktop, auto-play in view on mobile) ---
+const ClipCard = memo(function ClipCard({ clip, onOpen }: { clip: any; onOpen: () => void }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
+  // Detect touch-only devices
   useEffect(() => {
-    if (inView && videoRef.current) {
-      videoRef.current.play().catch(() => { });
-    } else if (videoRef.current) {
-      videoRef.current.pause();
-    }
-  }, [inView]);
+    setIsMobile(!window.matchMedia('(hover: hover)').matches);
+  }, []);
+
+  // Play trigger: inView for mobile autoplay
+  const { ref: playRef, inView } = useInView({
+    threshold: 0.3,
+    triggerOnce: false,
+  });
+
+  const shouldPlay = isMobile ? inView : isHovered;
 
   return (
-    <div ref={ref} className="w-full h-full">
+    <motion.div
+      ref={playRef}
+      whileHover={{ y: -10 }}
+      className="flex-shrink-0 w-[300px] md:w-auto aspect-[9/16] bg-black rounded-[2.5rem] overflow-hidden relative group cursor-pointer snap-center border border-[#2D2926]/10 shadow-2xl"
+      onClick={onOpen}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <ClipsPreview video={clip.video} shouldPlay={shouldPlay} />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-10 translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+        <p className="text-[#C5A059] text-[8px] uppercase tracking-[0.4em] font-bold mb-3">{clip.category}</p>
+        <h4 className="text-2xl font-bold text-white font-serif italic tracking-tight">{clip.title}</h4>
+      </div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 scale-75 group-hover:scale-100 border border-white/10 shadow-2xl">
+        <Play size={24} fill="white" className="text-white ml-1.5" />
+      </div>
+    </motion.div>
+  );
+});
+
+const ClipsPreview = memo(function ClipsPreview({ video, shouldPlay }: { video: string; shouldPlay: boolean }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+
+    if (shouldPlay) {
+      vid.play().catch(() => { });
+    } else {
+      vid.pause();
+      // Reset to start for consistent preview
+      if (vid.readyState > 0) vid.currentTime = 0;
+    }
+  }, [shouldPlay]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      videoRef.current?.pause();
+    };
+  }, []);
+
+  return (
+    <div className="w-full h-full">
       <HlsVideo
         ref={videoRef}
         src={video}
@@ -1343,22 +1548,61 @@ function ClipsPreview({ video }: { video: string }) {
       />
     </div>
   );
-}
+});
 
-function VerticalVideoPlayer({ src, onClose }: { src: string; onClose: () => void }) {
+const VerticalVideoPlayer = memo(function VerticalVideoPlayer({ src, onClose }: { src: string; onClose: () => void }) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [showPlayFeedback, setShowPlayFeedback] = useState<"play" | "pause" | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const feedbackTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const togglePlay = (e: React.MouseEvent) => {
+  // --- Play / Pause ---
+  const togglePlay = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
-    if (videoRef.current) {
-      if (isPlaying) videoRef.current.pause();
-      else videoRef.current.play();
-      setIsPlaying(!isPlaying);
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      video.play().catch(() => { });
+      setIsPlaying(true);
+      triggerFeedback("play");
+    } else {
+      video.pause();
+      setIsPlaying(false);
+      triggerFeedback("pause");
     }
-  };
+  }, []);
+
+  const triggerFeedback = useCallback((type: "play" | "pause") => {
+    if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
+    setShowPlayFeedback(type);
+    feedbackTimeout.current = setTimeout(() => setShowPlayFeedback(null), 600);
+  }, []);
+
+  // Cleanup feedback timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
+    };
+  }, []);
+
+  // Keep isPlaying in sync with actual video state (e.g. ended, stalled)
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    video.addEventListener("play", onPlay);
+    video.addEventListener("pause", onPause);
+    return () => {
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("pause", onPause);
+    };
+  }, []);
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1370,17 +1614,77 @@ function VerticalVideoPlayer({ src, onClose }: { src: string; onClose: () => voi
     }
   };
 
+  // --- Progress tracking ---
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const updateProgress = () => {
-      setProgress((video.currentTime / video.duration) * 100);
+      if (!isSeeking && video.duration) {
+        setProgress((video.currentTime / video.duration) * 100);
+      }
     };
 
     video.addEventListener("timeupdate", updateProgress);
     return () => video.removeEventListener("timeupdate", updateProgress);
+  }, [isSeeking]);
+
+  // --- Seek helpers ---
+  const seekToPosition = useCallback((clientX: number) => {
+    const bar = progressBarRef.current;
+    const video = videoRef.current;
+    if (!bar || !video || !video.duration) return;
+
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    video.currentTime = ratio * video.duration;
+    setProgress(ratio * 100);
   }, []);
+
+  // --- Mouse seek (desktop) ---
+  const handleProgressMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsSeeking(true);
+    seekToPosition(e.clientX);
+
+    const onMouseMove = (ev: MouseEvent) => {
+      ev.preventDefault();
+      seekToPosition(ev.clientX);
+    };
+    const onMouseUp = (ev: MouseEvent) => {
+      ev.preventDefault();
+      seekToPosition(ev.clientX);
+      setIsSeeking(false);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  }, [seekToPosition]);
+
+  // --- Touch seek (mobile) ---
+  const handleProgressTouchStart = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
+    setIsSeeking(true);
+    seekToPosition(e.touches[0].clientX);
+
+    const onTouchMove = (ev: TouchEvent) => {
+      ev.preventDefault(); // prevent scroll while seeking
+      seekToPosition(ev.touches[0].clientX);
+    };
+    const onTouchEnd = (ev: TouchEvent) => {
+      const touch = ev.changedTouches[0];
+      if (touch) seekToPosition(touch.clientX);
+      setIsSeeking(false);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
+
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd);
+  }, [seekToPosition]);
 
   return (
     <motion.div
@@ -1429,9 +1733,34 @@ function VerticalVideoPlayer({ src, onClose }: { src: string; onClose: () => voi
           </div>
         </div>
 
-        {/* Center Play/Pause Overlay */}
+        {/* Center Play/Pause Feedback (brief flash on tap) */}
         <AnimatePresence>
-          {!isPlaying && (
+          {showPlayFeedback && (
+            <motion.div
+              key={showPlayFeedback}
+              initial={{ opacity: 0.9, scale: 0.6 }}
+              animate={{ opacity: 0, scale: 1.3 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
+            >
+              <div className="w-20 h-20 rounded-full bg-white/15 backdrop-blur-xl flex items-center justify-center">
+                {showPlayFeedback === "pause" ? (
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-8 bg-white rounded-sm" />
+                    <div className="w-2.5 h-8 bg-white rounded-sm" />
+                  </div>
+                ) : (
+                  <Play size={36} fill="white" className="text-white ml-1.5" />
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Persistent pause overlay (stays until user resumes) */}
+        <AnimatePresence>
+          {!isPlaying && !showPlayFeedback && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1445,14 +1774,31 @@ function VerticalVideoPlayer({ src, onClose }: { src: string; onClose: () => voi
           )}
         </AnimatePresence>
 
-        {/* Bottom Progress Bar */}
-        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/10 overflow-hidden">
-          <motion.div
-            className="h-full bg-[#C5A059]"
-            style={{ width: `${progress}%` }}
-          />
+        {/* Bottom Seekable Progress Bar */}
+        <div
+          ref={progressBarRef}
+          className="absolute bottom-0 left-0 right-0 z-30 cursor-pointer group/progress"
+          onMouseDown={handleProgressMouseDown}
+          onTouchStart={handleProgressTouchStart}
+        >
+          {/* Enlarged touch/click target area */}
+          <div className="h-8 flex items-end">
+            {/* Track container — no overflow-hidden so the handle can stick out */}
+            <div className="w-full h-1.5 group-hover/progress:h-3 transition-all duration-200 relative">
+              {/* Track background */}
+              <div className="absolute inset-0 bg-white/10 rounded-t-sm" />
+              {/* Fill bar */}
+              <div
+                className="h-full bg-[#C5A059] rounded-t-sm relative"
+                style={{ width: `${progress}%` }}
+              >
+                {/* Seek handle (visible on hover / during drag) */}
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-4 h-4 bg-[#C5A059] rounded-full shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity duration-200 border-2 border-white z-10" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>
   );
-}
+});
