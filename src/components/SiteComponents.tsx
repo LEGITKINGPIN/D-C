@@ -992,24 +992,98 @@ const GalleryCard = memo(function GalleryCard({ img, label, onClick }: { img: st
   );
 });
 
-// --- Gallery Lightbox with Zoom & Pan ---
+// --- Gallery Lightbox with Zoom, Pan & Swipe Navigation ---
+// Separate touch handling for Android/iOS vs mouse for PC.
 const GalleryLightbox = memo(function GalleryLightbox({
   src,
+  allImages,
   onClose,
+  onNavigate,
 }: {
   src: string;
+  allImages: string[];
   onClose: () => void;
+  onNavigate: (img: string) => void;
 }) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  // Track whether a touch gesture is actively happening (disables CSS transition)
+  const [isTouching, setIsTouching] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const panStart = useRef({ x: 0, y: 0 });
-  const lastPinchDist = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // ── Live refs so touch handlers never read stale closures ──
+  const zoomRef = useRef(zoom);
+  const panRef = useRef(pan);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { panRef.current = pan; }, [pan]);
 
   const MIN_ZOOM = 1;
   const MAX_ZOOM = 5;
+
+  // ── Pan bounds enforcement ──
+  // Prevents panning the image beyond its visible boundaries.
+  const clampPan = useCallback((p: { x: number; y: number }, z: number) => {
+    if (z <= 1) return { x: 0, y: 0 };
+    const container = containerRef.current;
+    const img = imgRef.current;
+    if (!container || !img) return p;
+
+    const cRect = container.getBoundingClientRect();
+    const iRect = img.getBoundingClientRect();
+    // Natural rendered size of the image (before zoom transform)
+    const imgW = iRect.width / z;
+    const imgH = iRect.height / z;
+
+    // Maximum pan offsets (the image edge must stay within view)
+    // Pan is applied as translate inside scale, so max translate = (scaledSize - containerSize) / 2 / zoom
+    const maxPanX = Math.max(0, (imgW * z - cRect.width) / 2 / z);
+    const maxPanY = Math.max(0, (imgH * z - cRect.height) / 2 / z);
+
+    return {
+      x: Math.max(-maxPanX, Math.min(maxPanX, p.x)),
+      y: Math.max(-maxPanY, Math.min(maxPanY, p.y)),
+    };
+  }, []);
+
+  // ── Navigation helpers ──
+  const currentIdx = allImages.indexOf(src);
+  const goPrev = useCallback(() => {
+    if (allImages.length <= 1) return;
+    const prevIdx = (currentIdx - 1 + allImages.length) % allImages.length;
+    setZoom(1); setPan({ x: 0, y: 0 });
+    onNavigate(allImages[prevIdx]);
+  }, [allImages, currentIdx, onNavigate]);
+
+  const goNext = useCallback(() => {
+    if (allImages.length <= 1) return;
+    const nextIdx = (currentIdx + 1) % allImages.length;
+    setZoom(1); setPan({ x: 0, y: 0 });
+    onNavigate(allImages[nextIdx]);
+  }, [allImages, currentIdx, onNavigate]);
+
+  // Stable refs for navigation callbacks used inside the touch handler
+  const goPrevRef = useRef(goPrev);
+  const goNextRef = useRef(goNext);
+  useEffect(() => { goPrevRef.current = goPrev; }, [goPrev]);
+  useEffect(() => { goNextRef.current = goNext; }, [goNext]);
+
+  // Reset zoom/pan when image changes
+  useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }); }, [src]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") goPrev();
+      else if (e.key === "ArrowRight") goNext();
+      else if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [goPrev, goNext, onClose]);
 
   const applyZoom = useCallback((newZoom: number) => {
     const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
@@ -1017,7 +1091,9 @@ const GalleryLightbox = memo(function GalleryLightbox({
     if (clamped <= 1) setPan({ x: 0, y: 0 });
   }, []);
 
-  // Mouse wheel zoom
+  // ═══════════════════════════════════════════════════════════
+  // PC: Mouse wheel zoom (unchanged — works fine)
+  // ═══════════════════════════════════════════════════════════
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -1035,7 +1111,9 @@ const GalleryLightbox = memo(function GalleryLightbox({
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  // Mouse drag pan
+  // ═══════════════════════════════════════════════════════════
+  // PC: Mouse drag pan (unchanged — works fine)
+  // ═══════════════════════════════════════════════════════════
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (zoom <= 1) return;
@@ -1051,10 +1129,11 @@ const GalleryLightbox = memo(function GalleryLightbox({
   useEffect(() => {
     if (!isDragging) return;
     const onMove = (e: MouseEvent) => {
-      setPan({
+      const newPan = {
         x: panStart.current.x + (e.clientX - dragStart.current.x),
         y: panStart.current.y + (e.clientY - dragStart.current.y),
-      });
+      };
+      setPan(clampPan(newPan, zoomRef.current));
     };
     const onUp = () => setIsDragging(false);
     window.addEventListener("mousemove", onMove);
@@ -1063,63 +1142,351 @@ const GalleryLightbox = memo(function GalleryLightbox({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [isDragging]);
+  }, [isDragging, clampPan]);
 
-  // Touch: pinch-to-zoom & one-finger pan
+  // ═══════════════════════════════════════════════════════════
+  // MOBILE: Touch handler — pinch-to-zoom (anchored at midpoint),
+  //         1-finger pan (with bounds), swipe navigation,
+  //         and double-tap to zoom
+  // ═══════════════════════════════════════════════════════════
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    let touchPanStart = { x: 0, y: 0 };
-    let touchDragStart = { x: 0, y: 0 };
-    let currentPan = pan;
-    let currentZoom = zoom;
+
+    // ── Pinch state ──
+    let lastPinchDist: number | null = null;
+    let pinchMidX = 0;
+    let pinchMidY = 0;
+
+    // ── Single-finger state ──
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchPanStartPos = { x: 0, y: 0 };
+    let isPanningTouch = false;
+    let isSwipingTouch = false;
+    let swipeHandled = false;
+
+    // ── Double-tap detection ──
+    let lastTapTime = 0;
+    let lastTapX = 0;
+    let lastTapY = 0;
+
+    // ── Momentum / inertia state ──
+    let velocityX = 0;
+    let velocityY = 0;
+    let lastMoveTime = 0;
+    let lastMoveX = 0;
+    let lastMoveY = 0;
+    let momentumRaf = 0;
+
+    // Live-mutated copies kept in sync with React state via refs
+    let liveZoom = zoomRef.current;
+    let livePan = panRef.current;
+
+    // ── Was this gesture a pinch? (prevents pan re-entry after lifting one finger from pinch) ──
+    let wasPinching = false;
+
     const getPinchDist = (touches: TouchList) => {
       const dx = touches[0].clientX - touches[1].clientX;
       const dy = touches[0].clientY - touches[1].clientY;
       return Math.hypot(dx, dy);
     };
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        lastPinchDist.current = getPinchDist(e.touches);
-      } else if (e.touches.length === 1 && currentZoom > 1) {
-        e.preventDefault();
-        touchDragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        touchPanStart = { ...currentPan };
+
+    const getPinchMid = (touches: TouchList) => ({
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    });
+
+    const cancelMomentum = () => {
+      if (momentumRaf) {
+        cancelAnimationFrame(momentumRaf);
+        momentumRaf = 0;
       }
     };
+
+    // Clamp pan within bounds (inline version for imperative updates)
+    const clampPanLocal = (p: { x: number; y: number }, z: number) => {
+      if (z <= 1) return { x: 0, y: 0 };
+      const img = imgRef.current;
+      const container = containerRef.current;
+      if (!container || !img) return p;
+
+      const cRect = container.getBoundingClientRect();
+      const iRect = img.getBoundingClientRect();
+      const imgW = iRect.width / z;
+      const imgH = iRect.height / z;
+
+      const maxPanX = Math.max(0, (imgW * z - cRect.width) / 2 / z);
+      const maxPanY = Math.max(0, (imgH * z - cRect.height) / 2 / z);
+
+      return {
+        x: Math.max(-maxPanX, Math.min(maxPanX, p.x)),
+        y: Math.max(-maxPanY, Math.min(maxPanY, p.y)),
+      };
+    };
+
+    // ─────────────────── TOUCH START ───────────────────
+    const onTouchStart = (e: TouchEvent) => {
+      // Sync from latest React state
+      liveZoom = zoomRef.current;
+      livePan = panRef.current;
+      swipeHandled = false;
+      cancelMomentum();
+      setIsTouching(true);
+
+      if (e.touches.length === 2) {
+        // ── Pinch start ──
+        e.preventDefault();
+        isPanningTouch = false;
+        isSwipingTouch = false;
+        wasPinching = true;
+        lastPinchDist = getPinchDist(e.touches);
+        const mid = getPinchMid(e.touches);
+        pinchMidX = mid.x;
+        pinchMidY = mid.y;
+      } else if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        lastMoveX = touchStartX;
+        lastMoveY = touchStartY;
+        lastMoveTime = Date.now();
+        velocityX = 0;
+        velocityY = 0;
+
+        if (wasPinching) {
+          // Finger lifted from a pinch — don't start a new pan/swipe,
+          // just record position so the next onTouchMove can use it.
+          // We'll decide on touchMove whether to start panning.
+          wasPinching = false;
+          if (liveZoom > 1) {
+            isPanningTouch = true;
+            isSwipingTouch = false;
+            touchPanStartPos = { ...livePan };
+            // Update touchStartX/Y to current finger so there's no jump
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+          } else {
+            isPanningTouch = false;
+            isSwipingTouch = false;
+          }
+          return;
+        }
+
+        if (liveZoom > 1) {
+          // ── Pan mode (zoomed in) ──
+          e.preventDefault();
+          isPanningTouch = true;
+          isSwipingTouch = false;
+          touchPanStartPos = { ...livePan };
+        } else {
+          // ── Potential swipe-to-navigate ──
+          isPanningTouch = false;
+          isSwipingTouch = true;
+        }
+      }
+    };
+
+    // ─────────────────── TOUCH MOVE ───────────────────
     const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && lastPinchDist.current !== null) {
+      if (e.touches.length === 2 && lastPinchDist !== null) {
+        // ── Pinch zoom (anchored at midpoint) ──
         e.preventDefault();
         const dist = getPinchDist(e.touches);
-        const scale = dist / lastPinchDist.current;
-        lastPinchDist.current = dist;
-        currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentZoom * scale));
-        setZoom(currentZoom);
-        if (currentZoom <= 1) { currentPan = { x: 0, y: 0 }; setPan(currentPan); }
-      } else if (e.touches.length === 1 && currentZoom > 1) {
-        e.preventDefault();
-        const newPan = {
-          x: touchPanStart.x + (e.touches[0].clientX - touchDragStart.x),
-          y: touchPanStart.y + (e.touches[0].clientY - touchDragStart.y),
-        };
-        currentPan = newPan;
-        setPan(newPan);
+        const scaleRatio = dist / lastPinchDist;
+        lastPinchDist = dist;
+
+        const prevZoom = liveZoom;
+        liveZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, liveZoom * scaleRatio));
+
+        if (liveZoom > 1) {
+          // Adjust pan so the pinch midpoint stays stationary.
+          // The midpoint in image-space should map to the same screen position
+          // before and after the zoom change.
+          const container = containerRef.current;
+          if (container) {
+            const rect = container.getBoundingClientRect();
+            const cx = rect.width / 2;
+            const cy = rect.height / 2;
+
+            // Vector from center of container to the pinch midpoint
+            const mid = getPinchMid(e.touches);
+            const offsetX = mid.x - rect.left - cx;
+            const offsetY = mid.y - rect.top - cy;
+
+            // How much the pan needs to shift to keep the pinch point stable
+            const zoomDelta = liveZoom - prevZoom;
+            const newPan = {
+              x: livePan.x - (offsetX * zoomDelta) / (liveZoom * prevZoom),
+              y: livePan.y - (offsetY * zoomDelta) / (liveZoom * prevZoom),
+            };
+            livePan = clampPanLocal(newPan, liveZoom);
+            setPan(livePan);
+          }
+        } else {
+          livePan = { x: 0, y: 0 };
+          setPan(livePan);
+        }
+
+        setZoom(liveZoom);
+      } else if (e.touches.length === 1) {
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const dx = currentX - touchStartX;
+        const dy = currentY - touchStartY;
+
+        // Track velocity for momentum
+        const now = Date.now();
+        const dt = now - lastMoveTime;
+        if (dt > 0) {
+          velocityX = (currentX - lastMoveX) / dt;
+          velocityY = (currentY - lastMoveY) / dt;
+        }
+        lastMoveX = currentX;
+        lastMoveY = currentY;
+        lastMoveTime = now;
+
+        if (isPanningTouch && liveZoom > 1) {
+          // ── Panning the zoomed image ──
+          e.preventDefault();
+          const newPan = clampPanLocal(
+            {
+              x: touchPanStartPos.x + dx,
+              y: touchPanStartPos.y + dy,
+            },
+            liveZoom
+          );
+          livePan = newPan;
+          setPan(newPan);
+        } else if (isSwipingTouch && !swipeHandled) {
+          // ── Swipe to navigate (only when not zoomed) ──
+          if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            e.preventDefault();
+            swipeHandled = true;
+            if (dx > 0) {
+              goPrevRef.current();
+            } else {
+              goNextRef.current();
+            }
+          }
+        }
       }
     };
+
+    // ─────────────────── TOUCH END ───────────────────
     const onTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length < 2) lastPinchDist.current = null;
+      if (e.touches.length < 2) lastPinchDist = null;
+
+      if (e.touches.length === 0) {
+        // ── Double-tap to zoom detection ──
+        const now = Date.now();
+        const tapX = e.changedTouches[0]?.clientX ?? 0;
+        const tapY = e.changedTouches[0]?.clientY ?? 0;
+        const timeSinceLastTap = now - lastTapTime;
+        const distSinceLastTap = Math.hypot(tapX - lastTapX, tapY - lastTapY);
+
+        // Accept double-tap if < 300ms apart and fingers didn't move far
+        if (timeSinceLastTap < 300 && distSinceLastTap < 30 && !swipeHandled) {
+          // Toggle zoom
+          if (liveZoom > 1) {
+            liveZoom = 1;
+            livePan = { x: 0, y: 0 };
+          } else {
+            liveZoom = 2.5;
+            // Zoom towards the tap point
+            const container = containerRef.current;
+            if (container) {
+              const rect = container.getBoundingClientRect();
+              const cx = rect.width / 2;
+              const cy = rect.height / 2;
+              const offsetX = tapX - rect.left - cx;
+              const offsetY = tapY - rect.top - cy;
+              livePan = clampPanLocal(
+                {
+                  x: -offsetX / liveZoom,
+                  y: -offsetY / liveZoom,
+                },
+                liveZoom
+              );
+            }
+          }
+          setZoom(liveZoom);
+          setPan(livePan);
+          lastTapTime = 0; // Reset so triple-tap doesn't re-trigger
+        } else {
+          lastTapTime = now;
+          lastTapX = tapX;
+          lastTapY = tapY;
+        }
+
+        // ── Momentum / inertia for panning ──
+        if (isPanningTouch && liveZoom > 1) {
+          const decay = 0.95;
+          const minVelocity = 0.01;
+          let vx = velocityX * 16; // convert from px/ms to px/frame (~16ms)
+          let vy = velocityY * 16;
+
+          const animateMomentum = () => {
+            vx *= decay;
+            vy *= decay;
+
+            if (Math.abs(vx) < minVelocity && Math.abs(vy) < minVelocity) {
+              momentumRaf = 0;
+              return;
+            }
+
+            const newPan = clampPanLocal(
+              { x: livePan.x + vx, y: livePan.y + vy },
+              liveZoom
+            );
+            livePan = newPan;
+            setPan(newPan);
+
+            momentumRaf = requestAnimationFrame(animateMomentum);
+          };
+
+          if (Math.abs(vx) > 0.5 || Math.abs(vy) > 0.5) {
+            momentumRaf = requestAnimationFrame(animateMomentum);
+          }
+        }
+
+        isPanningTouch = false;
+        isSwipingTouch = false;
+        wasPinching = false;
+
+        // Small delay before removing isTouching so the last setPan
+        // renders without CSS transition
+        setTimeout(() => setIsTouching(false), 50);
+      } else if (e.touches.length === 1 && wasPinching) {
+        // ── Transitioned from pinch (2 fingers) to 1 finger ──
+        // Re-anchor the single finger for panning without jump
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchPanStartPos = { ...livePan };
+        lastMoveX = touchStartX;
+        lastMoveY = touchStartY;
+        lastMoveTime = Date.now();
+        velocityX = 0;
+        velocityY = 0;
+        if (liveZoom > 1) {
+          isPanningTouch = true;
+          isSwipingTouch = false;
+        }
+      }
     };
+
     el.addEventListener("touchstart", onTouchStart, { passive: false });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchend", onTouchEnd, { passive: false });
     return () => {
+      cancelMomentum();
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
     };
-  }, [zoom, pan]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Registered once — reads from refs
 
+  // PC: double-click to toggle zoom
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -1132,6 +1499,10 @@ const GalleryLightbox = memo(function GalleryLightbox({
     if (zoom <= 1 && !isDragging) onClose();
   }, [zoom, isDragging, onClose]);
 
+  // Determine whether CSS transition should be active
+  // Disable during any active pointer interaction for real-time tracking
+  const isActiveGesture = isDragging || isTouching;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -1140,6 +1511,7 @@ const GalleryLightbox = memo(function GalleryLightbox({
       onClick={handleBackdropClick}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2D2926]/95 backdrop-blur-xl"
     >
+      {/* Close button */}
       <motion.button
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -1149,34 +1521,74 @@ const GalleryLightbox = memo(function GalleryLightbox({
       >
         <X size={40} strokeWidth={1.5} />
       </motion.button>
+
+      {/* Prev / Next arrows — visible on all devices */}
+      {allImages.length > 1 && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); goPrev(); }}
+            className="absolute left-3 md:left-8 top-1/2 -translate-y-1/2 z-[101] w-11 h-11 md:w-14 md:h-14 rounded-full bg-black/40 md:bg-white/10 hover:bg-[#C5A059] backdrop-blur-md flex items-center justify-center text-white/80 hover:text-white border border-white/10 hover:border-transparent transition-all duration-300 shadow-lg"
+            aria-label="Previous image"
+          >
+            <ChevronLeft size={22} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); goNext(); }}
+            className="absolute right-3 md:right-8 top-1/2 -translate-y-1/2 z-[101] w-11 h-11 md:w-14 md:h-14 rounded-full bg-black/40 md:bg-white/10 hover:bg-[#C5A059] backdrop-blur-md flex items-center justify-center text-white/80 hover:text-white border border-white/10 hover:border-transparent transition-all duration-300 shadow-lg"
+            aria-label="Next image"
+          >
+            <ChevronRight size={22} />
+          </button>
+        </>
+      )}
+
+      {/* Hint text */}
       <motion.div
         initial={{ opacity: 1 }}
         animate={{ opacity: 0 }}
         transition={{ delay: 2, duration: 1 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/40 text-[10px] uppercase tracking-[0.4em] font-bold z-[101] pointer-events-none"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/40 text-[10px] uppercase tracking-[0.4em] font-bold z-[101] pointer-events-none hidden md:block"
       >
         Scroll to zoom · Drag to pan · Double-click to reset
       </motion.div>
+      <motion.div
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 0 }}
+        transition={{ delay: 2.5, duration: 1 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/40 text-[10px] uppercase tracking-[0.4em] font-bold z-[101] pointer-events-none md:hidden"
+      >
+        Swipe to browse · Pinch to zoom · Double-tap to toggle
+      </motion.div>
+
+      {/* Image counter */}
+      {allImages.length > 1 && (
+        <div className="absolute top-6 left-6 md:top-10 md:left-10 text-white/30 text-[10px] uppercase tracking-[0.4em] font-bold z-[101] pointer-events-none">
+          {currentIdx + 1} / {allImages.length}
+        </div>
+      )}
+
+      {/* Image container */}
       <motion.div
         ref={containerRef}
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="relative w-full h-full flex items-center justify-center overflow-hidden"
+        className="relative w-full h-full flex items-center justify-center overflow-hidden touch-none"
         style={{ cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in" }}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={handleMouseDown}
         onDoubleClick={handleDoubleClick}
       >
         <img
+          ref={imgRef}
           src={src}
           alt="Selected Gallery Item"
           draggable={false}
-          className="max-w-full max-h-full object-contain rounded-lg shadow-2xl select-none"
+          className="max-w-full max-h-full object-contain rounded-lg shadow-2xl select-none will-change-transform"
           style={{
             transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-            transition: isDragging ? "none" : "transform 0.2s ease-out",
+            transition: isActiveGesture ? "none" : "transform 0.2s ease-out",
           }}
         />
       </motion.div>
@@ -1263,7 +1675,7 @@ export const Gallery = memo(function Gallery() {
       {/* Lightbox Modal with Zoom & Pan */}
       <AnimatePresence>
         {selectedImage && (
-          <GalleryLightbox src={selectedImage} onClose={() => setSelectedImage(null)} />
+          <GalleryLightbox src={selectedImage} allImages={images} onClose={() => setSelectedImage(null)} onNavigate={(img) => setSelectedImage(img)} />
         )}
       </AnimatePresence>
     </section>
@@ -1399,7 +1811,7 @@ export const Contact = memo(function Contact() {
         </div>
 
         {/* Footer */}
-        <div className="mt-48 pt-12 border-t border-[#2D2926]/5 text-center text-[#2D2926]/70 text-[9px] uppercase tracking-[0.4em] font-bold">
+        <div className="mt-16 pt-8 border-t border-[#2D2926]/5 text-center text-[#2D2926]/70 text-[9px] uppercase tracking-[0.4em] font-bold">
           <p>© {new Date().getFullYear()} {siteConfig.name} Studios. All Rights Reserved.</p>
         </div>
       </div>
