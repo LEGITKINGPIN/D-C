@@ -1026,6 +1026,7 @@ const GalleryLightbox = memo(function GalleryLightbox({
 
   // ── Pan bounds enforcement ──
   // Prevents panning the image beyond its visible boundaries.
+  // Pan values are in screen pixels (scale(z) translate(pan/z) = pan on screen).
   const clampPan = useCallback((p: { x: number; y: number }, z: number) => {
     if (z <= 1) return { x: 0, y: 0 };
     const container = containerRef.current;
@@ -1034,14 +1035,14 @@ const GalleryLightbox = memo(function GalleryLightbox({
 
     const cRect = container.getBoundingClientRect();
     const iRect = img.getBoundingClientRect();
-    // Natural rendered size of the image (before zoom transform)
+    // iRect is the *transformed* (zoomed) size on screen
+    // Natural rendered size = iRect / z
     const imgW = iRect.width / z;
     const imgH = iRect.height / z;
 
-    // Maximum pan offsets (the image edge must stay within view)
-    // Pan is applied as translate inside scale, so max translate = (scaledSize - containerSize) / 2 / zoom
-    const maxPanX = Math.max(0, (imgW * z - cRect.width) / 2 / z);
-    const maxPanY = Math.max(0, (imgH * z - cRect.height) / 2 / z);
+    // Max screen-pixel offset: allow panning until the image edge meets the container edge
+    const maxPanX = Math.max(0, (imgW * z - cRect.width) / 2);
+    const maxPanY = Math.max(0, (imgH * z - cRect.height) / 2);
 
     return {
       x: Math.max(-maxPanX, Math.min(maxPanX, p.x)),
@@ -1205,6 +1206,7 @@ const GalleryLightbox = memo(function GalleryLightbox({
     };
 
     // Clamp pan within bounds (inline version for imperative updates)
+    // Same logic as clampPan above — pan is in screen pixels
     const clampPanLocal = (p: { x: number; y: number }, z: number) => {
       if (z <= 1) return { x: 0, y: 0 };
       const img = imgRef.current;
@@ -1216,8 +1218,8 @@ const GalleryLightbox = memo(function GalleryLightbox({
       const imgW = iRect.width / z;
       const imgH = iRect.height / z;
 
-      const maxPanX = Math.max(0, (imgW * z - cRect.width) / 2 / z);
-      const maxPanY = Math.max(0, (imgH * z - cRect.height) / 2 / z);
+      const maxPanX = Math.max(0, (imgW * z - cRect.width) / 2);
+      const maxPanY = Math.max(0, (imgH * z - cRect.height) / 2);
 
       return {
         x: Math.max(-maxPanX, Math.min(maxPanX, p.x)),
