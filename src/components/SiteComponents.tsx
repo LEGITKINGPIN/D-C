@@ -1279,7 +1279,10 @@ const GalleryLightbox = memo(function GalleryLightbox({
           isSwipingTouch = false;
           touchPanStartPos = { ...livePan };
         } else {
-          // ── Potential swipe-to-navigate ──
+          // ── Potential swipe-to-navigate or double-tap ──
+          // Must preventDefault to stop browser from intercepting
+          // the gesture (e.g. native double-tap-to-zoom on viewport)
+          e.preventDefault();
           isPanningTouch = false;
           isSwipingTouch = true;
         }
