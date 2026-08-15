@@ -10,3 +10,6 @@
 > - React
 > - Adaptive HLS Video Streaming
 > - Vercel Edge Global CDN
+>
+> ## Location & Service Area
+> Based in New Delhi, India, D&C MediaHouse provides premium cinematic videography and storytelling services for clients locally in the Delhi NCR region and globally.
