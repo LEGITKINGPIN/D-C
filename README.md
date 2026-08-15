@@ -1,4 +1,4 @@
-# D&C MediaHouse - Cinematic Portfolio
+# D&C MediaHouse
 
 A high-end cinematic portfolio website for D&C MediaHouse, featuring adaptive video streaming (HLS) and modern animations.
 
