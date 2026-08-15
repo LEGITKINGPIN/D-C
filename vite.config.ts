@@ -5,7 +5,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/D-C/',
+  // GitHub Pages serves the site from /D-C/, while Vercel serves it from
+  // the domain root. Keep both deployment targets working from one build.
+  base: process.env.VERCEL ? '/' : '/D-C/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
