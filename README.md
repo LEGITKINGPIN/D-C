@@ -3,7 +3,7 @@
 A high-end cinematic portfolio website for D&C MediaHouse, featuring adaptive video streaming (HLS) and modern animations.
 
 ## Live Site
-The site is hosted on GitHub Pages: [https://www.dcmediahouse.in/](https://www.dcmediahouse.in/))
+The site is hosted on GitHub Pages: [https://www.dcmediahouse.in/](https://www.dcmediahouse.in/)
 
 ## Development
 
