@@ -471,6 +471,7 @@ export function Hero() {
       <HlsVideo
         ref={videoRef}
         src={siteConfig.hero.video}
+        autoPlay
         loop
         muted
         playsInline
