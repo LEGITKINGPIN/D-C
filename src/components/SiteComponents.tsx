@@ -1976,7 +1976,7 @@ export function Contact({ setActiveView }: { setActiveView?: (v: string) => void
               {/* Connect Column */}
               <div className="col-span-2 sm:col-span-1">
                 <h4 className="text-[11px] md:text-xs uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 mb-5 md:mb-6">Connect</h4>
-                <ul className="space-y-3.5 grid grid-cols-2 sm:grid-cols-1 gap-x-6 gap-y-3.5">
+                <ul className="space-y-3.5">
                   <li>
                     <a 
                       href="#about" 
