@@ -231,7 +231,7 @@ export function useIdleTimer(timeoutMs = 10000) {
 
 
 // --- Navbar ---
-export function Navbar() {
+export function Navbar({ activeView = "home", setActiveView }: { activeView?: string; setActiveView?: (v: string) => void }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isIdle = useIdleTimer(10000);
@@ -251,19 +251,25 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navItems = ["Work", "Films", "Gallery", "Contact"];
+  const navItems = ["Work", "Films", "Gallery", "About", "Contact"];
 
   return (
     <>
       <nav className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-6 md:px-12 py-4 md:py-6 flex justify-between items-center",
-        isScrolled
-          ? "bg-black/70 backdrop-blur-xl shadow-lg py-3 md:py-4"
+        (isScrolled || activeView === "about")
+          ? "bg-black/90 backdrop-blur-xl shadow-lg py-3 md:py-4"
           : "bg-transparent",
-        isIdle && !isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
+        (isIdle && !isScrolled && activeView === "home") ? "opacity-0 pointer-events-none" : "opacity-100"
       )}>
         {/* Logo */}
-        <div className="relative group cursor-pointer">
+        <div 
+          className="relative group cursor-pointer"
+          onClick={() => {
+            setActiveView?.("home");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
           <div className="text-xl md:text-2xl font-playfair font-semibold tracking-tight text-[#F8F5F0] drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
             D&C <span className="text-xs md:text-sm font-sans font-bold uppercase tracking-[0.3em] ml-1 text-[#C5A059]">MediaHouse</span>
           </div>
@@ -275,10 +281,28 @@ export function Navbar() {
             <a
               key={item}
               href={`#${item.toLowerCase()}`}
-              className="text-[11px] font-inter font-medium uppercase tracking-[2px] text-[#F8F5F0]/70 hover:text-[#C5A059] transition-all duration-300 relative group py-2 drop-shadow-[0_1px_4px_rgba(0,0,0,0.3)]"
+              onClick={(e) => {
+                if (item === "About") {
+                  e.preventDefault();
+                  setActiveView?.("about");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                } else {
+                  if (activeView === "about") {
+                    e.preventDefault();
+                    setActiveView?.("home");
+                    setTimeout(() => {
+                      document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: "smooth" });
+                    }, 100);
+                  }
+                }
+              }}
+              className={cn(
+                "text-[11px] font-inter font-medium uppercase tracking-[2px] hover:text-[#C5A059] transition-all duration-300 relative group py-2 drop-shadow-[0_1px_4px_rgba(0,0,0,0.3)]",
+                (activeView === "about" && item === "About") ? "text-[#C5A059]" : "text-[#F8F5F0]/70"
+              )}
             >
               {item}
-              <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-[#C5A059] transition-all duration-300 group-hover:w-full" />
+              <span className="absolute bottom-0 left-0 h-[1px] bg-[#C5A059] transition-all duration-300 group-hover:w-full w-0" />
             </a>
           ))}
         </div>
@@ -320,7 +344,22 @@ export function Navbar() {
                 <motion.a
                   key={item}
                   href={`#${item.toLowerCase()}`}
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={(e) => {
+                    setIsMenuOpen(false);
+                    if (item === "About") {
+                      e.preventDefault();
+                      setActiveView?.("about");
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    } else {
+                      if (activeView === "about") {
+                        e.preventDefault();
+                        setActiveView?.("home");
+                        setTimeout(() => {
+                          document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: "smooth" });
+                        }, 100);
+                      }
+                    }
+                  }}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 + idx * 0.1 }}
@@ -1006,11 +1045,13 @@ const GalleryLightbox = memo(function GalleryLightbox({
   allImages,
   onClose,
   onNavigate,
+  caption,
 }: {
   src: string;
   allImages: string[];
   onClose: () => void;
-  onNavigate: (img: string) => void;
+  onNavigate?: (img: string) => void;
+  caption?: React.ReactNode;
 }) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -1084,10 +1125,10 @@ const GalleryLightbox = memo(function GalleryLightbox({
 
   // Keyboard navigation
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") goPrev();
-      else if (e.key === "ArrowRight") goNext();
-      else if (e.key === "Escape") onClose();
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "ArrowLeft") goPrev();
+      else if (ev.key === "ArrowRight") goNext();
+      else if (ev.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1535,7 +1576,7 @@ const GalleryLightbox = memo(function GalleryLightbox({
       </motion.button>
 
       {/* Prev / Next arrows — visible on all devices */}
-      {allImages.length > 1 && (
+      {allImages.length > 1 && onNavigate && (
         <>
           <button
             onClick={(e) => { e.stopPropagation(); goPrev(); }}
@@ -1586,23 +1627,33 @@ const GalleryLightbox = memo(function GalleryLightbox({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="relative w-full h-full flex items-center justify-center overflow-hidden touch-none"
+        className="relative w-full h-full flex items-center justify-center overflow-hidden touch-none p-4 md:p-8"
         style={{ cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in" }}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={handleMouseDown}
         onDoubleClick={handleDoubleClick}
       >
-        <img
-          ref={imgRef}
-          src={src}
-          alt="Selected Gallery Item"
-          draggable={false}
-          className="max-w-full max-h-full object-contain rounded-lg shadow-2xl select-none will-change-transform"
+        <div
+          className="relative max-w-full max-h-full rounded-lg shadow-2xl flex items-center justify-center will-change-transform"
           style={{
             transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
             transition: isActiveGesture ? "none" : "transform 0.2s ease-out",
           }}
-        />
+        >
+          <img
+            ref={imgRef}
+            src={src}
+            alt="Selected Gallery Item"
+            draggable={false}
+            className="max-w-full max-h-full object-contain rounded-lg select-none"
+          />
+          {/* Custom Caption on the photo */}
+          {caption && (
+            <div className="absolute bottom-0 left-0 right-0 z-[101] pointer-events-none rounded-b-lg overflow-hidden">
+              {caption}
+            </div>
+          )}
+        </div>
       </motion.div>
     </motion.div>
   );
@@ -1698,8 +1749,8 @@ export const Gallery = memo(function Gallery() {
 });
 
 
-// --- Merged Contact Section ---
-export const Contact = memo(function Contact() {
+// --- Contact & Footer ---
+export function Contact({ setActiveView }: { setActiveView?: (v: string) => void }) {
   const [submitted, setSubmitted] = useState(false);
 
   return (
@@ -1833,16 +1884,13 @@ export const Contact = memo(function Contact() {
       <footer className="bg-[#F5F2ED] pt-20 md:pt-28 border-t border-[#2D2926]/10 relative overflow-hidden">
         {/* Watermark */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden" aria-hidden="true">
-          <span className="lg:hidden text-[50vw] sm:text-[20vw] md:text-[18vw] font-serif italic font-bold text-[#2D2926]/[0.025] tracking-tighter whitespace-nowrap leading-none">
-            D&C
-          </span>
-          <span className="hidden lg:inline text-[15vw] font-serif italic font-bold text-[#2D2926]/[0.025] tracking-tighter whitespace-nowrap leading-none">
+          <span className="text-[16vw] md:text-[10vw] font-serif italic font-bold text-[#2D2926]/[0.025] tracking-tighter whitespace-nowrap leading-none">
             D&C MediaHouse
           </span>
         </div>
 
         {/* Content Grid */}
-        <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-10">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-14 md:gap-8 mb-16 md:mb-20">
             {/* Brand Column */}
             <div className="md:col-span-4 space-y-5">
@@ -1929,6 +1977,19 @@ export const Contact = memo(function Contact() {
                 <h4 className="text-[11px] md:text-xs uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 mb-5 md:mb-6">Connect</h4>
                 <ul className="space-y-3.5 grid grid-cols-2 sm:grid-cols-1 gap-x-6 gap-y-3.5">
                   <li>
+                    <a 
+                      href="#about" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setActiveView?.("about");
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300"
+                    >
+                      About Us
+                    </a>
+                  </li>
+                  <li>
                     <a href="#contact" className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">Contact Us</a>
                   </li>
                   <li>
@@ -1968,7 +2029,7 @@ export const Contact = memo(function Contact() {
       </footer>
     </>
   );
-});
+}
 
 // --- Clips Layout (Vertical Videos) ---
 export const ClipsLayout = memo(function ClipsLayout() {
@@ -2346,3 +2407,70 @@ const VerticalVideoPlayer = memo(function VerticalVideoPlayer({ src, onClose }: 
     </motion.div>
   );
 });
+
+export function AboutSection() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  return (
+    <section id="about" className="min-h-screen pt-32 pb-24 bg-[#F5F2ED] text-[#2D2926] relative z-20 flex items-center">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          {/* Left: Image */}
+          <div className="lg:col-span-4">
+             <div 
+               className="overflow-hidden rounded-2xl shadow-2xl relative aspect-[3/4] w-full max-w-sm mx-auto lg:mx-0 cursor-pointer group"
+               onClick={() => setIsModalOpen(true)}
+             >
+                <img 
+                  src={siteConfig.about.image} 
+                  alt={siteConfig.about.name} 
+                  className="absolute inset-0 w-full h-full object-cover object-center" 
+                />
+             </div>
+          </div>
+
+          {/* Right: Content */}
+          <div className="lg:col-span-8 space-y-8 md:space-y-10">
+             <div>
+               <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif italic font-bold tracking-tight mb-4">{siteConfig.about.name}</h2>
+               <p className="text-[#C5A059] font-sans uppercase tracking-[3px] text-xs md:text-sm font-bold">{siteConfig.about.role}</p>
+             </div>
+             
+             <div className="space-y-4 text-[#2D2926]/75 leading-relaxed text-sm md:text-base lg:text-lg max-w-3xl">
+                {siteConfig.about.bio.map((p, i) => <p key={i}>{p}</p>)}
+             </div>
+             
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-[#2D2926]/10">
+                {siteConfig.about.disciplines.map((d, i) => (
+                  <div key={i} className="space-y-2">
+                    <h3 className="text-base md:text-lg font-serif font-bold text-[#2D2926]">{d.title}</h3>
+                    <p className="text-[#2D2926]/60 text-xs md:text-sm leading-relaxed">{d.desc}</p>
+                  </div>
+                ))}
+             </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Lightbox Modal */}
+      {isModalOpen && siteConfig.about.image && typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          <GalleryLightbox 
+            src={siteConfig.about.image} 
+            allImages={[siteConfig.about.image]} 
+            onClose={() => setIsModalOpen(false)} 
+            caption={
+              <div className="text-center w-full px-6 pt-12 pb-6 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
+                <h2 className="text-3xl md:text-5xl font-serif italic font-bold tracking-tight text-white mb-2 drop-shadow-md">{siteConfig.about.name}</h2>
+                <p className="text-[#C5A059] font-sans uppercase tracking-[2px] md:tracking-[3px] text-[10px] md:text-xs font-bold drop-shadow-lg">{siteConfig.about.role}</p>
+              </div>
+            }
+          />
+        </AnimatePresence>,
+        document.body
+      )}
+    </section>
+  );
+}

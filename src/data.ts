@@ -160,5 +160,39 @@ export const siteConfig = {
       video: "work/commercial/VARSHA_STORY/playlist.m3u8",
       category: "Art"
     }
-  ]
+  ],
+  about: {
+    name: "Saksham Chaudhary",
+    role: "Founder & Creative Director",
+    image: "About me/SK About me.png",
+    tagline: "We Don't Shoot Videos. We Tell Stories.",
+    bio: [
+      "I am a filmmaker, cinematographer, and visual director dedicated to crafting emotion-driven visual stories. With years behind the lens, I founded D&C MediaHouse to bring a distinct cinematic language to brands, artists, and live spectacles.",
+      "Every frame is treated as a piece of art — from intentional lighting and evocative camera motion to precision editing and color grading. We believe in visual rhythm that doesn't just catch eyes, but leaves a lingering impact."
+    ],
+    disciplines: [
+      {
+        title: "Commercial Direction",
+        desc: "High-impact brand films and commercials crafted with cinematic fidelity."
+      },
+      {
+        title: "Event & Concert Cinema",
+        desc: "Electrifying live coverage capturing raw energy, scale, and atmosphere."
+      },
+      {
+        title: "Fashion & Lifestyle",
+        desc: "Editorial motion with contemporary aesthetics and bespoke art direction."
+      },
+      {
+        title: "Post & Color Grading",
+        desc: "Meticulous color palettes and soundscapes that shape the emotional tone."
+      }
+    ],
+    stats: [
+      { value: "50+", label: "Cinematic Projects" },
+      { value: "10+", label: "Marquee Brands" },
+      { value: "100M+", label: "Digital Reach" },
+      { value: "100%", label: "Vision Delivered" }
+    ]
+  }
 };
