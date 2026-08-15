@@ -1,4 +1,5 @@
 import { Navbar, Hero, BrandStrip, FeaturedCarousel, ClipsLayout, Gallery, Contact } from "./components/SiteComponents";
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Gallery />
         <Contact />
       </main>
+      <SpeedInsights />
     </div>
   );
 }
