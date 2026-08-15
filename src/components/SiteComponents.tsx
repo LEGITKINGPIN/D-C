@@ -1703,134 +1703,270 @@ export const Contact = memo(function Contact() {
   const [submitted, setSubmitted] = useState(false);
 
   return (
-    <section id="contact" className="pt-24 md:pt-48 pb-16 bg-white px-6 md:px-8 border-t border-[#2D2926]/5">
-      <div className="max-w-7xl mx-auto">
-        {/* Top Header */}
-        <div className="text-center mb-24 md:mb-32">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-            viewport={{ once: true }}
-          >
-            <span className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.8em] font-bold mb-8 block">
-              Collaboration
-            </span>
-            <h2 className="text-5xl md:text-9xl font-bold text-[#2D2926] tracking-tighter mb-8 leading-[0.8] font-serif italic">
-              {siteConfig.contact.cta}
-            </h2>
-          </motion.div>
+    <>
+      <section id="contact" className="pt-24 md:pt-48 pb-16 bg-white px-6 md:px-8 border-t border-[#2D2926]/5">
+        <div className="max-w-7xl mx-auto">
+          {/* Top Header */}
+          <div className="text-center mb-24 md:mb-32">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true }}
+            >
+              <span className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.8em] font-bold mb-8 block">
+                Collaboration
+              </span>
+              <h2 className="text-5xl md:text-9xl font-bold text-[#2D2926] tracking-tighter mb-8 leading-[0.8] font-serif italic">
+                {siteConfig.contact.cta}
+              </h2>
+            </motion.div>
+          </div>
+
+          {/* Integration Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 md:gap-24 items-start">
+            {/* Left Column: Quick Contact */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 1, delay: 0.2 }}
+              viewport={{ once: true }}
+              className="lg:col-span-5 space-y-8"
+            >
+              <div>
+                <h3 className="text-4xl md:text-6xl font-bold text-[#2D2926] tracking-tight font-serif italic mb-6 leading-tight">
+                  Want to <span className="text-[#C5A059]">get in touch</span>?
+                </h3>
+                <p className="text-[#2D2926]/65 text-base md:text-lg leading-relaxed max-w-md">
+                  Drop me a message! Whether you have a project in mind or just want to say hi, I'll get back to you within 24 hours.
+                </p>
+              </div>
+
+              <div className="space-y-4 pt-6">
+                <p className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70">Quick Connect</p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <a
+                    href={siteConfig.contact.whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-8 py-4 border-2 border-[#25D366]/40 bg-white text-[#2D2926] text-[9px] uppercase tracking-[0.4em] font-bold hover:bg-[#25D366] hover:text-white hover:border-[#25D366] transition-all duration-500 group shadow-sm flex-1 sm:flex-none justify-center"
+                  >
+                    <MessageCircle size={16} className="text-[#25D366] group-hover:text-white transition-colors" />
+                    WhatsApp
+                  </a>
+                  <a
+                    href={siteConfig.contact.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-8 py-4 border-2 border-[#C5A059]/40 bg-white text-[#2D2926] text-[9px] uppercase tracking-[0.4em] font-bold hover:bg-[#C5A059] hover:text-white hover:border-[#C5A059] transition-all duration-500 group shadow-sm flex-1 sm:flex-none justify-center"
+                  >
+                    <Instagram size={16} className="text-[#C5A059] group-hover:text-white transition-colors" />
+                    Instagram
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Right Column: Form */}
+            <div className="lg:col-span-7 bg-[#F5F2ED]/30 p-8 md:p-12 rounded-[2rem] border border-[#2D2926]/5">
+              {submitted ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center py-12"
+                >
+                  <div className="w-16 h-16 rounded-full bg-[#C5A059]/10 flex items-center justify-center mx-auto mb-6">
+                    <Send size={24} className="text-[#C5A059]" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-[#2D2926] font-serif mb-3 italic">Message Sent!</h3>
+                  <p className="text-[#2D2926]/40 text-sm tracking-wide">Thanks for reaching out. We'll get back to you soon.</p>
+                </motion.div>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const form = e.currentTarget;
+                    const data = new FormData(form);
+                    try {
+                      await fetch(`https://formsubmit.co/ajax/${siteConfig.contact.email}`, {
+                        method: "POST",
+                        headers: { "Accept": "application/json" },
+                        body: data,
+                      });
+                    } catch (_) { }
+                    setSubmitted(true);
+                  }}
+                  className="space-y-6"
+                >
+                  <input type="hidden" name="_captcha" value="false" />
+                  <input type="hidden" name="_template" value="table" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">First name</label>
+                      <input type="text" name="first_name" required placeholder="Saksham" className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">Last name</label>
+                      <input type="text" name="last_name" required placeholder="Chaudhary" className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">Email</label>
+                    <input type="email" name="email" required placeholder="you@example.com" className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">Message</label>
+                    <textarea name="message" required rows={4} placeholder="Hi! I'd love to chat about..." className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all resize-none" />
+                  </div>
+                  <button type="submit" className="w-full py-5 bg-[#2D2926] text-white text-[10px] uppercase tracking-[0.5em] font-bold rounded-xl hover:bg-[#C5A059] hover:shadow-xl hover:shadow-[#C5A059]/20 transition-all duration-500 flex items-center justify-center gap-3">
+                    Submit <Send size={14} />
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="bg-[#F5F2ED] pt-20 md:pt-28 border-t border-[#2D2926]/10 relative overflow-hidden">
+        {/* Watermark */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden" aria-hidden="true">
+          <span className="lg:hidden text-[50vw] sm:text-[20vw] md:text-[18vw] font-serif italic font-bold text-[#2D2926]/[0.025] tracking-tighter whitespace-nowrap leading-none">
+            D&C
+          </span>
+          <span className="hidden lg:inline text-[15vw] font-serif italic font-bold text-[#2D2926]/[0.025] tracking-tighter whitespace-nowrap leading-none">
+            D&C MediaHouse
+          </span>
         </div>
 
-        {/* Integration Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 md:gap-24 items-start">
-          {/* Left Column: Quick Contact */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1, delay: 0.2 }}
-            viewport={{ once: true }}
-            className="lg:col-span-5 space-y-8"
-          >
-            <div>
-              <h3 className="text-4xl md:text-6xl font-bold text-[#2D2926] tracking-tight font-serif italic mb-6 leading-tight">
-                Want to <span className="text-[#C5A059]">get in touch</span>?
-              </h3>
-              <p className="text-[#2D2926]/65 text-base md:text-lg leading-relaxed max-w-md">
-                Drop me a message! Whether you have a project in mind or just want to say hi, I'll get back to you within 24 hours.
+        {/* Content Grid */}
+        <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-10">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-14 md:gap-8 mb-16 md:mb-20">
+            {/* Brand Column */}
+            <div className="md:col-span-4 space-y-5">
+              <div className="text-2xl md:text-3xl font-playfair font-semibold tracking-tight text-[#2D2926]">
+                D&C <span className="text-sm md:text-base font-sans font-bold uppercase tracking-[0.3em] ml-1 text-[#C5A059]">MediaHouse</span>
+              </div>
+              <p className="text-[#2D2926]/50 text-base md:text-[15px] leading-relaxed max-w-sm">
+                Cinematic storytelling for events, brands, and commercials. We don't shoot videos — we tell stories.
               </p>
-            </div>
-
-            <div className="space-y-4 pt-6">
-              <p className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70">Quick Connect</p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <a
-                  href={siteConfig.contact.whatsapp}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-8 py-4 border-2 border-[#25D366]/40 bg-white text-[#2D2926] text-[9px] uppercase tracking-[0.4em] font-bold hover:bg-[#25D366] hover:text-white hover:border-[#25D366] transition-all duration-500 group shadow-sm flex-1 sm:flex-none justify-center"
-                >
-                  <MessageCircle size={16} className="text-[#25D366] group-hover:text-white transition-colors" />
-                  WhatsApp
-                </a>
-                <a
-                  href={siteConfig.contact.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-8 py-4 border-2 border-[#C5A059]/40 bg-white text-[#2D2926] text-[9px] uppercase tracking-[0.4em] font-bold hover:bg-[#C5A059] hover:text-white hover:border-[#C5A059] transition-all duration-500 group shadow-sm flex-1 sm:flex-none justify-center"
-                >
-                  <Instagram size={16} className="text-[#C5A059] group-hover:text-white transition-colors" />
-                  Instagram
-                </a>
+              <div className="pt-3">
+                <p className="text-[11px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/40 mb-5">Follow Us</p>
+                <div className="flex gap-4">
+                  <a
+                    href={siteConfig.contact.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-12 h-12 rounded-full border border-[#2D2926]/10 flex items-center justify-center text-[#2D2926]/50 hover:bg-[#C5A059] hover:text-white hover:border-[#C5A059] transition-all duration-300"
+                    aria-label="Instagram"
+                  >
+                    <Instagram size={20} />
+                  </a>
+                  <a
+                    href={siteConfig.contact.whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-12 h-12 rounded-full border border-[#2D2926]/10 flex items-center justify-center text-[#2D2926]/50 hover:bg-[#25D366] hover:text-white hover:border-[#25D366] transition-all duration-300"
+                    aria-label="WhatsApp"
+                  >
+                    <MessageCircle size={20} />
+                  </a>
+                  <a
+                    href={`mailto:${siteConfig.contact.email}`}
+                    className="w-12 h-12 rounded-full border border-[#2D2926]/10 flex items-center justify-center text-[#2D2926]/50 hover:bg-[#2D2926] hover:text-white hover:border-[#2D2926] transition-all duration-300"
+                    aria-label="Email"
+                  >
+                    <Send size={17} />
+                  </a>
+                </div>
               </div>
             </div>
-          </motion.div>
 
-          {/* Right Column: Form */}
-          <div className="lg:col-span-7 bg-[#F5F2ED]/30 p-8 md:p-12 rounded-[2rem] border border-[#2D2926]/5">
-            {submitted ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-12"
-              >
-                <div className="w-16 h-16 rounded-full bg-[#C5A059]/10 flex items-center justify-center mx-auto mb-6">
-                  <Send size={24} className="text-[#C5A059]" />
-                </div>
-                <h3 className="text-2xl font-bold text-[#2D2926] font-serif mb-3 italic">Message Sent!</h3>
-                <p className="text-[#2D2926]/40 text-sm tracking-wide">Thanks for reaching out. We'll get back to you soon.</p>
-              </motion.div>
-            ) : (
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const form = e.currentTarget;
-                  const data = new FormData(form);
-                  try {
-                    await fetch(`https://formsubmit.co/ajax/${siteConfig.contact.email}`, {
-                      method: "POST",
-                      headers: { "Accept": "application/json" },
-                      body: data,
-                    });
-                  } catch (_) { }
-                  setSubmitted(true);
-                }}
-                className="space-y-6"
-              >
-                <input type="hidden" name="_captcha" value="false" />
-                <input type="hidden" name="_template" value="table" />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">First name</label>
-                    <input type="text" name="first_name" required placeholder="Saksham" className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">Last name</label>
-                    <input type="text" name="last_name" required placeholder="Chaudhary" className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">Email</label>
-                  <input type="email" name="email" required placeholder="you@example.com" className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 ml-1">Message</label>
-                  <textarea name="message" required rows={4} placeholder="Hi! I'd love to chat about..." className="w-full px-6 py-4 bg-white border border-[#2D2926]/5 rounded-xl text-[#2D2926] text-sm focus:outline-none focus:border-[#C5A059] transition-all resize-none" />
-                </div>
-                <button type="submit" className="w-full py-5 bg-[#2D2926] text-white text-[10px] uppercase tracking-[0.5em] font-bold rounded-xl hover:bg-[#C5A059] hover:shadow-xl hover:shadow-[#C5A059]/20 transition-all duration-500 flex items-center justify-center gap-3">
-                  Submit <Send size={14} />
-                </button>
-              </form>
-            )}
+            {/* Link Columns — 2-col grid on mobile, 3 columns on desktop */}
+            <div className="md:col-span-8 md:col-start-5 grid grid-cols-2 sm:grid-cols-3 gap-10 md:gap-8">
+              {/* Services Column */}
+              <div>
+                <h4 className="text-[11px] md:text-xs uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 mb-5 md:mb-6">Services</h4>
+                <ul className="space-y-3.5">
+                  {["Event Coverage", "Brand Films", "Commercials", "Music Videos", "Lifestyle Shoots"].map((item) => (
+                    <li key={item}>
+                      <a href="#work" className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">{item}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Portfolio Column */}
+              <div>
+                <h4 className="text-[11px] md:text-xs uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 mb-5 md:mb-6">Portfolio</h4>
+                <ul className="space-y-3.5">
+                  {[
+                    { label: "Showreels", href: siteConfig.playbook.boards.showreels },
+                    { label: "Weddings", href: siteConfig.playbook.boards.weddings },
+                    { label: "Live Events", href: siteConfig.playbook.boards.liveEvents },
+                    { label: "Fashion", href: siteConfig.playbook.boards.fashion },
+                    { label: "View All", href: siteConfig.playbook.main },
+                  ].map((item) => (
+                    <li key={item.label}>
+                      <a
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300 inline-flex items-center gap-2"
+                      >
+                        {item.label}
+                        {item.label === "View All" && <ExternalLink size={13} />}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Connect Column */}
+              <div className="col-span-2 sm:col-span-1">
+                <h4 className="text-[11px] md:text-xs uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 mb-5 md:mb-6">Connect</h4>
+                <ul className="space-y-3.5 grid grid-cols-2 sm:grid-cols-1 gap-x-6 gap-y-3.5">
+                  <li>
+                    <a href="#contact" className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">Contact Us</a>
+                  </li>
+                  <li>
+                    <a href={siteConfig.contact.whatsapp} target="_blank" rel="noopener noreferrer" className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">WhatsApp</a>
+                  </li>
+                  <li>
+                    <a href={siteConfig.contact.instagram} target="_blank" rel="noopener noreferrer" className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">Instagram</a>
+                  </li>
+                  <li>
+                    <a href={`mailto:${siteConfig.contact.email}`} className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">Email</a>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-16 pt-8 border-t border-[#2D2926]/5 text-center text-[#2D2926]/70 text-[9px] uppercase tracking-[0.4em] font-bold">
-          <p>© {new Date().getFullYear()} {siteConfig.name} Studios. All Rights Reserved.</p>
+        {/* Bottom Bar */}
+        <div className="relative z-10 border-t border-[#2D2926]/8">
+          <div className="max-w-7xl mx-auto px-6 md:px-12 py-6 md:py-7 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-[#2D2926]/40 text-[10px] md:text-[11px] uppercase tracking-[0.3em] font-bold">
+              © {new Date().getFullYear()} {siteConfig.name} Studios. All Rights Reserved.
+            </p>
+            <div className="flex gap-6 md:gap-8">
+              {["Work", "Films", "Gallery", "Contact"].map((item) => (
+                <a
+                  key={item}
+                  href={`#${item.toLowerCase()}`}
+                  className="text-[#2D2926]/30 text-[10px] md:text-[11px] uppercase tracking-[0.3em] font-bold hover:text-[#C5A059] transition-colors duration-300"
+                >
+                  {item}
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </footer>
+    </>
   );
 });
 
