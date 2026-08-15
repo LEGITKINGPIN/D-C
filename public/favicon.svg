@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#000000"/>
+  <text x="256" y="285"
+    font-family="'Playfair Display', 'Cormorant Garamond', 'Georgia', serif"
+    font-style="italic"
+    font-weight="700"
+    font-size="185"
+    fill="#FFFFFF"
+    text-anchor="middle"
+    dominant-baseline="central"
+    letter-spacing="-2px">D&amp;C</text>
+</svg>
