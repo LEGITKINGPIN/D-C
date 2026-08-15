@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import React, { useState, useEffect, useRef, useCallback, forwardRef, memo, useMemo, useImperativeHandle } from "react";
+import { createPortal } from "react-dom";
 import type Hls from "hls.js";
 import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink, Volume2, VolumeX, Share2 } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -624,36 +625,39 @@ export function PortfolioGrid() {
       </div>
 
       {/* Video Modal for portfolio items */}
-      <AnimatePresence>
-        {openVideo && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2D2926]/95 backdrop-blur-md"
-            onClick={() => setOpenVideo(null)}
-          >
-            <button
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {openVideo && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2D2926]/95 backdrop-blur-md"
               onClick={() => setOpenVideo(null)}
-              className="absolute top-10 right-10 text-white/50 hover:text-white transition-all duration-300 cursor-pointer"
-              aria-label="Close Modal"
             >
-              <X size={40} />
-            </button>
-            <div className="w-full max-w-7xl px-8 aspect-video" onClick={(e) => e.stopPropagation()}>
-              <HlsVideo
-                src={openVideo}
-                autoPlay
-                controls
-                playsInline
-                className="w-full h-full object-contain"
-                onContextMenu={(e) => e.preventDefault()}
-                controlsList="nodownload"
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <button
+                onClick={() => setOpenVideo(null)}
+                className="absolute top-10 right-10 text-white/50 hover:text-white transition-all duration-300 cursor-pointer"
+                aria-label="Close Modal"
+              >
+                <X size={40} />
+              </button>
+              <div className="w-full max-w-7xl px-8 aspect-video" onClick={(e) => e.stopPropagation()}>
+                <HlsVideo
+                  src={openVideo}
+                  autoPlay
+                  controls
+                  playsInline
+                  className="w-full h-full object-contain"
+                  onContextMenu={(e) => e.preventDefault()}
+                  controlsList="nodownload"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </section>
   );
 }
@@ -939,35 +943,38 @@ export function FeaturedCarousel() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {isVideoModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2D2926]/95 backdrop-blur-md"
-          >
-            <button
-              onClick={() => setIsVideoModalOpen(false)}
-              className="absolute top-10 right-10 text-white/50 hover:text-white transition-all duration-300 cursor-pointer"
-              aria-label="Close Modal"
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isVideoModalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2D2926]/95 backdrop-blur-md"
             >
-              <X size={40} />
-            </button>
-            <div className="w-full max-w-7xl px-8 aspect-video">
-              <HlsVideo
-                src={items[currentIndex].video}
-                autoPlay
-                controls
-                playsInline
-                className="w-full h-full object-contain"
-                onContextMenu={(e) => e.preventDefault()}
-                controlsList="nodownload"
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <button
+                onClick={() => setIsVideoModalOpen(false)}
+                className="absolute top-10 right-10 text-white/50 hover:text-white transition-all duration-300 cursor-pointer"
+                aria-label="Close Modal"
+              >
+                <X size={40} />
+              </button>
+              <div className="w-full max-w-7xl px-8 aspect-video">
+                <HlsVideo
+                  src={items[currentIndex].video}
+                  autoPlay
+                  controls
+                  playsInline
+                  className="w-full h-full object-contain"
+                  onContextMenu={(e) => e.preventDefault()}
+                  controlsList="nodownload"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </section>
   );
 }
@@ -1678,11 +1685,14 @@ export const Gallery = memo(function Gallery() {
       <div className="absolute inset-y-0 right-0 w-16 md:w-32 bg-gradient-to-l from-[#F5F2ED] to-transparent z-10 pointer-events-none" />
 
       {/* Lightbox Modal with Zoom & Pan */}
-      <AnimatePresence>
-        {selectedImage && (
-          <GalleryLightbox src={selectedImage} allImages={images} onClose={() => setSelectedImage(null)} onNavigate={(img) => setSelectedImage(img)} />
-        )}
-      </AnimatePresence>
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {selectedImage && (
+            <GalleryLightbox src={selectedImage} allImages={images} onClose={() => setSelectedImage(null)} onNavigate={(img) => setSelectedImage(img)} />
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </section>
   );
 });
@@ -1829,6 +1839,10 @@ export const ClipsLayout = memo(function ClipsLayout() {
   const [activeClip, setActiveClip] = useState<string | null>(null);
   const clips = (siteConfig as any).clips || [];
 
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("videoModalState", { detail: !!activeClip }));
+  }, [activeClip]);
+
   return (
     <section id="work" className="py-24 md:py-40 bg-[#F5F2ED] px-6 md:px-12 lg:px-16 overflow-hidden relative z-10">
       <div className="max-w-[1600px] mx-auto">
@@ -1853,14 +1867,17 @@ export const ClipsLayout = memo(function ClipsLayout() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {activeClip && (
-          <VerticalVideoPlayer
-            src={activeClip}
-            onClose={() => setActiveClip(null)}
-          />
-        )}
-      </AnimatePresence>
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {activeClip && (
+            <VerticalVideoPlayer
+              src={activeClip}
+              onClose={() => setActiveClip(null)}
+            />
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </section>
   );
 });
