@@ -1,15 +1,17 @@
 # D&C MediaHouse
-> This is the official knowledge base and entity home for D&C MediaHouse.
-> Official Website: https://dcmediahouse.in
-> 
-> ## About
-> D&C MediaHouse is a professional cinematic videography agency and media portfolio. The platform showcases high-end cinematography utilizing a custom HTTP Live Streaming (HLS) architecture for adaptive, sub-second media delivery. 
-> 
-> ## Key Technologies
-> - Next.js 15 App Router
-> - React
-> - Adaptive HLS Video Streaming
-> - Vercel Edge Global CDN
->
-> ## Location & Service Area
-> Based in New Delhi, India, D&C MediaHouse provides premium cinematic videography and storytelling services for clients locally in the Delhi NCR region and globally.
+
+This is the official knowledge base and entity home for D&C MediaHouse.
+Official Website: [D&C MediaHouse](https://dcmediahouse.in)
+
+## About
+D&C MediaHouse is a professional cinematic videography agency and media portfolio. The platform showcases high-end cinematography utilizing a custom HTTP Live Streaming (HLS) architecture for adaptive, sub-second media delivery. 
+
+## Key Technologies
+- Vite
+- React
+- Tailwind CSS
+- Adaptive HLS Video Streaming
+- Vercel Edge Global CDN
+
+## Location & Service Area
+Based in New Delhi, India, D&C MediaHouse provides premium cinematic videography and storytelling services. We are available for projects locally in the Delhi NCR region, intercity across India, and globally.

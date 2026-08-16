@@ -86,6 +86,8 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
   return (
     <video
       ref={internalRef}
+      aria-hidden="true"
+      title="Cinematic video"
       {...rest}
       playsInline
       // @ts-ignore – webkit vendor attribute for older iOS
@@ -622,7 +624,7 @@ export function PortfolioGrid() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-16 md:mb-24">
           <div className="max-w-xl">
-            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Selected Works</h2>
+            <h2 className="text-[#7A6128] text-[10px] uppercase tracking-[0.6em] font-bold mb-4 md:mb-6">Selected Works</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Crafting visual legacies.</h3>
           </div>
         </div>
@@ -933,7 +935,7 @@ export function FeaturedCarousel() {
       <div className="max-w-7xl mx-auto px-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8">
           <div>
-            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Featured Films</h2>
+            <h2 className="text-[#7A6128] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Featured Films</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">The Director's Cut</h3>
           </div>
           <div className="flex gap-2 md:gap-3">
@@ -1031,6 +1033,8 @@ const GalleryCard = memo(function GalleryCard({ img, label, onClick }: { img: st
         alt={`Gallery ${label}`}
         loading="lazy"
         decoding="async"
+        width={800}
+        height={520}
         className="w-full h-full object-cover transition-transform duration-700 will-change-transform group-hover:scale-110"
       />
       <div className="absolute inset-0 rounded-2xl md:rounded-3xl border-2 border-transparent group-hover:border-[#C5A059]/30 transition-all duration-500" />
@@ -1716,10 +1720,10 @@ export const Gallery = memo(function Gallery() {
       <div className="px-6 md:px-12 mb-8 md:mb-12">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-4 md:gap-8">
           <div>
-            <h2 className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.6em] font-bold mb-3 md:mb-5">Visual Journal</h2>
+            <h2 className="text-[#7A6128] text-[10px] uppercase tracking-[0.6em] font-bold mb-3 md:mb-5">Visual Journal</h2>
             <h3 className="text-4xl md:text-7xl font-bold text-[#2D2926] tracking-tight font-serif leading-none">Halcyon.</h3>
           </div>
-          <p className="text-[#2D2926]/50 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right leading-relaxed">
+          <p className="text-[#2D2926]/75 text-[10px] uppercase tracking-[0.4em] font-bold max-w-xs md:text-right leading-relaxed">
             A collection of frames captured across the globe.
           </p>
         </div>
@@ -1766,7 +1770,7 @@ export function Contact({ setActiveView }: { setActiveView?: (v: string) => void
               transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
               viewport={{ once: true }}
             >
-              <span className="text-[#8B6F2E] text-[10px] uppercase tracking-[0.8em] font-bold mb-8 block">
+              <span className="text-[#7A6128] text-[10px] uppercase tracking-[0.8em] font-bold mb-8 block">
                 Collaboration
               </span>
               <h2 className="text-5xl md:text-9xl font-bold text-[#2D2926] tracking-tighter mb-8 leading-[0.8] font-serif italic">
@@ -1831,7 +1835,7 @@ export function Contact({ setActiveView }: { setActiveView?: (v: string) => void
                     <Send size={24} className="text-[#C5A059]" />
                   </div>
                   <h3 className="text-2xl font-bold text-[#2D2926] font-serif mb-3 italic">Message Sent!</h3>
-                  <p className="text-[#2D2926]/40 text-sm tracking-wide">Thanks for reaching out. We'll get back to you soon.</p>
+                  <p className="text-[#2D2926]/70 text-sm tracking-wide">Thanks for reaching out. We'll get back to you soon.</p>
                 </motion.div>
               ) : (
                 <form
@@ -1898,17 +1902,17 @@ export function Contact({ setActiveView }: { setActiveView?: (v: string) => void
               <div className="text-2xl md:text-3xl font-playfair font-semibold tracking-tight text-[#2D2926]">
                 D&C <span className="text-sm md:text-base font-sans font-bold uppercase tracking-[0.3em] ml-1 text-[#C5A059]">MediaHouse</span>
               </div>
-              <p className="text-[#2D2926]/50 text-base md:text-[15px] leading-relaxed max-w-sm">
+              <p className="text-[#2D2926]/75 text-base md:text-[15px] leading-relaxed max-w-sm">
                 Cinematic storytelling for events, brands, and commercials. We don't shoot videos — we tell stories.
               </p>
               <div className="pt-3">
-                <p className="text-[11px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/40 mb-5">Follow Us</p>
+                <p className="text-[11px] uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 mb-5">Follow Us</p>
                 <div className="flex gap-4">
                   <a
                     href={siteConfig.contact.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-12 h-12 rounded-full border border-[#2D2926]/10 flex items-center justify-center text-[#2D2926]/50 hover:bg-[#C5A059] hover:text-white hover:border-[#C5A059] transition-all duration-300"
+                    className="w-12 h-12 rounded-full border border-[#2D2926]/10 flex items-center justify-center text-[#2D2926]/75 hover:bg-[#C5A059] hover:text-white hover:border-[#C5A059] transition-all duration-300"
                     aria-label="Instagram"
                   >
                     <Instagram size={20} />
@@ -1917,14 +1921,14 @@ export function Contact({ setActiveView }: { setActiveView?: (v: string) => void
                     href={siteConfig.contact.whatsapp}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-12 h-12 rounded-full border border-[#2D2926]/10 flex items-center justify-center text-[#2D2926]/50 hover:bg-[#25D366] hover:text-white hover:border-[#25D366] transition-all duration-300"
+                    className="w-12 h-12 rounded-full border border-[#2D2926]/10 flex items-center justify-center text-[#2D2926]/75 hover:bg-[#25D366] hover:text-white hover:border-[#25D366] transition-all duration-300"
                     aria-label="WhatsApp"
                   >
                     <MessageCircle size={20} />
                   </a>
                   <a
                     href={`mailto:${siteConfig.contact.email}`}
-                    className="w-12 h-12 rounded-full border border-[#2D2926]/10 flex items-center justify-center text-[#2D2926]/50 hover:bg-[#2D2926] hover:text-white hover:border-[#2D2926] transition-all duration-300"
+                    className="w-12 h-12 rounded-full border border-[#2D2926]/10 flex items-center justify-center text-[#2D2926]/75 hover:bg-[#2D2926] hover:text-white hover:border-[#2D2926] transition-all duration-300"
                     aria-label="Email"
                   >
                     <Send size={17} />
@@ -1941,7 +1945,7 @@ export function Contact({ setActiveView }: { setActiveView?: (v: string) => void
                 <ul className="space-y-3.5">
                   {["Event Coverage", "Brand Films", "Commercials", "Music Videos", "Lifestyle Shoots"].map((item) => (
                     <li key={item}>
-                      <a href="#work" className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">{item}</a>
+                      <a href="#work" className="text-[#2D2926]/75 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">{item}</a>
                     </li>
                   ))}
                 </ul>
@@ -1963,7 +1967,7 @@ export function Contact({ setActiveView }: { setActiveView?: (v: string) => void
                         href={item.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300 inline-flex items-center gap-2"
+                        className="text-[#2D2926]/75 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300 inline-flex items-center gap-2"
                       >
                         {item.label}
                         {item.label === "View All" && <ExternalLink size={13} />}
@@ -1985,19 +1989,19 @@ export function Contact({ setActiveView }: { setActiveView?: (v: string) => void
                         setActiveView?.("about");
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
-                      className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300"
+                      className="text-[#2D2926]/75 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300"
                     >
                       About Us
                     </a>
                   </li>
                   <li>
-                    <a href="#contact" className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">Contact Us</a>
+                    <a href="#contact" className="text-[#2D2926]/75 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">Contact Us</a>
                   </li>
                   <li>
-                    <a href={siteConfig.contact.whatsapp} target="_blank" rel="noopener noreferrer" className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">WhatsApp</a>
+                    <a href={siteConfig.contact.whatsapp} target="_blank" rel="noopener noreferrer" className="text-[#2D2926]/75 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">WhatsApp</a>
                   </li>
                   <li>
-                    <a href={siteConfig.contact.instagram} target="_blank" rel="noopener noreferrer" className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">Instagram</a>
+                    <a href={siteConfig.contact.instagram} target="_blank" rel="noopener noreferrer" className="text-[#2D2926]/75 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">Instagram</a>
                   </li>
                   <li>
                     <a href={`mailto:${siteConfig.contact.email}`} className="text-[#2D2926]/50 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">Email</a>
@@ -2019,7 +2023,7 @@ export function Contact({ setActiveView }: { setActiveView?: (v: string) => void
                 <a
                   key={item}
                   href={`#${item.toLowerCase()}`}
-                  className="text-[#2D2926]/30 text-[10px] md:text-[11px] uppercase tracking-[0.3em] font-bold hover:text-[#C5A059] transition-colors duration-300"
+                  className="text-[#2D2926]/60 text-[10px] md:text-[11px] uppercase tracking-[0.3em] font-bold hover:text-[#C5A059] transition-colors duration-300"
                 >
                   {item}
                 </a>

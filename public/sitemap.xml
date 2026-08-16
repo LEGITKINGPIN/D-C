@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://dcmediahouse.com/</loc>
-    <lastmod>2024-05-15</lastmod>
+    <loc>https://dcmediahouse.in/</loc>
+    <lastmod>2026-08-16</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <!-- Since it's a SPA, anchoring links helps index specific sections -->
   <url>
-    <loc>https://dcmediahouse.com/#work</loc>
+    <loc>https://dcmediahouse.in/#work</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://dcmediahouse.com/#films</loc>
+    <loc>https://dcmediahouse.in/#films</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://dcmediahouse.com/#about</loc>
+    <loc>https://dcmediahouse.in/#about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dcmediahouse.com/#contact</loc>
+    <loc>https://dcmediahouse.in/#contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
