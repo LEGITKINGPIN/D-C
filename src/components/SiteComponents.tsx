@@ -406,9 +406,10 @@ export function Hero() {
   const isGlobalPaused = useGlobalPauseState();
   const audioFadeRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { projects } = useSanityProjects();
+  const { projects, loading } = useSanityProjects();
   const heroProject = useMemo(() => projects.find((p: any) => p.displaySection === 'hero' || (!p.displaySection && p.title.toLowerCase().includes('hero'))), [projects]);
-  const heroSrc = heroProject?.playbackId ? `https://stream.mux.com/${heroProject.playbackId}.m3u8` : siteConfig.hero.video;
+  const heroSrc = heroProject?.playbackId ? `https://stream.mux.com/${heroProject.playbackId}.m3u8` : (loading ? '' : siteConfig.hero.video);
+  const heroPoster = heroProject?.playbackId ? `https://image.mux.com/${heroProject.playbackId}/thumbnail.webp?time=0` : siteConfig.hero.poster;
 
   // Play video on component mount and keep it playing throughout
   useEffect(() => {
@@ -433,24 +434,18 @@ export function Hero() {
       // ✅ ENTERING IMMERSION: Unmute and fade in volume over 1 second
       video.muted = false;
       video.volume = 0;
-
-      const targetVolume = 0.3;
-      const duration = 1000; // 1 second fade-in
-      const startTime = Date.now();
-
+      
+      const fadeStep = 0.05; // 5% volume increase per step
+      const fadeInterval = 50; // 50ms per step -> 1 second total
+      
       audioFadeRef.current = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-
-        // Ease-out cubic for smooth fade
-        const eased = 1 - Math.pow(1 - progress, 3);
-        video.volume = targetVolume * eased;
-
-        if (progress >= 1) {
-          clearInterval(audioFadeRef.current!);
-          audioFadeRef.current = null;
+        if (video.volume < 1 - fadeStep) {
+          video.volume += fadeStep;
+        } else {
+          video.volume = 1;
+          if (audioFadeRef.current) clearInterval(audioFadeRef.current);
         }
-      }, 16); // ~60fps
+      }, fadeInterval);
     } else {
       // ✅ EXITING IMMERSION: Immediately mute and silence
       video.muted = true;
@@ -483,19 +478,22 @@ export function Hero() {
 
   return (
     <section id="hero" className="relative h-screen w-full overflow-hidden flex flex-col items-center justify-center bg-[#2D2926]">
-      <HlsVideo
-        ref={videoRef}
-        src={heroSrc}
-        poster={siteConfig.hero.poster}
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="metadata"
-        className="absolute inset-0 w-full h-full object-cover will-change-transform"
-        onContextMenu={(e) => e.preventDefault()}
-        controlsList="nodownload"
-      />
+      {heroSrc && (
+        <HlsVideo
+          key={heroSrc}
+          ref={videoRef}
+          src={heroSrc}
+          poster={heroPoster}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          className="absolute inset-0 w-full h-full object-cover will-change-transform"
+          onContextMenu={(e) => e.preventDefault()}
+          controlsList="nodownload"
+        />
+      )}
 
       <div className={cn(
         "relative z-10 text-center px-4 max-w-5xl mt-20 transition-all duration-1000",
