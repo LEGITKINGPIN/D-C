@@ -1021,7 +1021,7 @@ export function FeaturedCarousel() {
               </button>
               <div className="w-full max-w-7xl px-8 aspect-video">
                 <HlsVideo
-                  src={items[currentIndex].video}
+                  src={items[currentIndex]?.playbackId ? `https://stream.mux.com/${items[currentIndex].playbackId}.m3u8` : ''}
                   autoPlay
                   controls
                   playsInline
