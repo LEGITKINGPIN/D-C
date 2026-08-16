@@ -406,6 +406,10 @@ export function Hero() {
   const isGlobalPaused = useGlobalPauseState();
   const audioFadeRef = useRef<NodeJS.Timeout | null>(null);
 
+  const { projects } = useSanityProjects();
+  const heroProject = useMemo(() => projects.find((p: any) => p.displaySection === 'hero' || (!p.displaySection && p.title.toLowerCase().includes('hero'))), [projects]);
+  const heroSrc = heroProject?.playbackId ? `https://stream.mux.com/${heroProject.playbackId}.m3u8` : siteConfig.hero.video;
+
   // Play video on component mount and keep it playing throughout
   useEffect(() => {
     const video = videoRef.current;
@@ -481,7 +485,7 @@ export function Hero() {
     <section id="hero" className="relative h-screen w-full overflow-hidden flex flex-col items-center justify-center bg-[#2D2926]">
       <HlsVideo
         ref={videoRef}
-        src={siteConfig.hero.video}
+        src={heroSrc}
         poster={siteConfig.hero.poster}
         autoPlay
         loop
