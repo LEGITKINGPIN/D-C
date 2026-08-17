@@ -15,10 +15,11 @@ import { useSanityProjects } from "../hooks/useSanityProjects";
 // ---------------------------------------------------------------------------
 interface HlsVideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> {
   src: string;
+  onHlsReady?: (hls: any) => void;
 }
 
 const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
-  { src, ...rest },
+  { src, onHlsReady, ...rest },
   ref
 ) {
   const internalRef = useRef<HTMLVideoElement>(null);
@@ -65,11 +66,14 @@ const HlsVideo = forwardRef<HTMLVideoElement, HlsVideoProps>(function HlsVideo(
           hls.attachMedia(video);
 
           // autoPlay doesn't work natively with hls.js — kick-start after manifest parse
-          if (rest.autoPlay) {
-            hls.on(HlsLib.Events.MANIFEST_PARSED, () => {
+          hls.on(HlsLib.Events.MANIFEST_PARSED, () => {
+            if (onHlsReady) {
+              onHlsReady(hls);
+            }
+            if (rest.autoPlay) {
               video.play().catch(() => { });
-            });
-          }
+            }
+          });
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
           // Safari native HLS (iOS)
           video.src = resolvedSrc;
@@ -1297,7 +1301,8 @@ const GalleryLightbox = memo(function GalleryLightbox({
   }, [onClose, navigate]);
 
   // Generate 9 visible slides for a wide buffer to ensure smooth entry/exit when held
-  const offsets = [-4, -3, -2, -1, 0, 1, 2, 3, 4];
+  // If there's only 1 image, we don't need a carousel effect
+  const offsets = allImages.length === 1 ? [0] : [-4, -3, -2, -1, 0, 1, 2, 3, 4];
 
   return (
     <motion.div
@@ -1348,6 +1353,15 @@ const GalleryLightbox = memo(function GalleryLightbox({
           if (zoom > 1) { setZoom(1); setPan({ x: 0, y: 0 }); }
           else setZoom(2);
         }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            const dx = Math.abs(e.clientX - dragStart.current.x);
+            const dy = Math.abs(e.clientY - dragStart.current.y);
+            if (dx < 15 && dy < 15) {
+              onClose();
+            }
+          }
+        }}
       >
         {offsets.map(offset => {
           const absoluteIndex = activeIndex + offset;
@@ -1397,28 +1411,20 @@ const GalleryLightbox = memo(function GalleryLightbox({
                   className="max-w-full max-h-[70vh] md:max-h-[85vh] object-contain select-none pointer-events-none"
                   alt={`Gallery image ${realIndex + 1}`}
                 />
+                {isCenter && caption && (
+                  <div className="absolute bottom-0 left-0 right-0 z-[110] flex justify-center pointer-events-none">
+                     {caption}
+                  </div>
+                )}
               </div>
             </motion.div>
           );
         })}
       </div>
 
-      {/* Caption for Center Image */}
-      {caption && (
-        <div className="absolute bottom-0 left-0 right-0 z-[110] flex justify-center pointer-events-none">
-           {caption}
-        </div>
-      )}
+      {/* Caption for Center Image is now rendered inside the center image container */}
       
-      {/* Instructions */}
-      <motion.div
-        initial={{ opacity: 1 }}
-        animate={{ opacity: 0 }}
-        transition={{ delay: 2, duration: 1 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/40 text-[10px] uppercase tracking-[0.4em] font-bold z-[101] pointer-events-none"
-      >
-        Swipe or Arrow Keys to Browse
-      </motion.div>
+      {/* Instructions removed per request */}
     </motion.div>
   );
 });
