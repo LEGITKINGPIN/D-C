@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "motion/react";
 import React, { useState, useEffect, useRef, useCallback, forwardRef, memo, useMemo, useImperativeHandle } from "react";
 import { createPortal } from "react-dom";
 import type Hls from "hls.js";
-import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink, Volume2, VolumeX, Share2 } from "lucide-react";
+import { Play, X, ChevronLeft, ChevronRight, Instagram, MessageCircle, Menu, Send, ExternalLink, Volume2, VolumeX, Share2, Settings, Maximize, Minimize } from "lucide-react";
 import { cn } from "../lib/utils";
 import { siteConfig } from "../data";
 import { useInView } from "react-intersection-observer";
@@ -1056,26 +1056,13 @@ export function FeaturedCarousel() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2D2926]/95 backdrop-blur-md"
+              className="fixed inset-0 z-[200] bg-black backdrop-blur-2xl flex items-center justify-center"
+              onClick={() => setIsVideoModalOpen(false)}
             >
-              <button
-                onClick={() => setIsVideoModalOpen(false)}
-                className="absolute top-10 right-10 text-white/50 hover:text-white transition-all duration-300 cursor-pointer"
-                aria-label="Close Modal"
-              >
-                <X size={40} />
-              </button>
-              <div className="w-full max-w-7xl px-8 aspect-video">
-                <HlsVideo
-                  src={items[currentIndex]?.playbackId ? `https://stream.mux.com/${items[currentIndex].playbackId}.m3u8` : ''}
-                  autoPlay
-                  controls
-                  playsInline
-                  className="w-full h-full object-contain"
-                  onContextMenu={(e) => e.preventDefault()}
-                  controlsList="nodownload"
-                />
-              </div>
+              <VerticalVideoItem 
+                src={items[currentIndex]?.playbackId ? `https://stream.mux.com/${items[currentIndex].playbackId}.m3u8` : ''} 
+                onClose={() => setIsVideoModalOpen(false)} 
+              />
             </motion.div>
           )}
         </AnimatePresence>,
@@ -1664,23 +1651,7 @@ const GalleryLightbox = memo(function GalleryLightbox({
         </>
       )}
 
-      {/* Hint text */}
-      <motion.div
-        initial={{ opacity: 1 }}
-        animate={{ opacity: 0 }}
-        transition={{ delay: 2, duration: 1 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/40 text-[10px] uppercase tracking-[0.4em] font-bold z-[101] pointer-events-none hidden md:block"
-      >
-        Scroll to zoom · Drag to pan · Double-click to reset
-      </motion.div>
-      <motion.div
-        initial={{ opacity: 1 }}
-        animate={{ opacity: 0 }}
-        transition={{ delay: 2.5, duration: 1 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/40 text-[10px] uppercase tracking-[0.4em] font-bold z-[101] pointer-events-none md:hidden"
-      >
-        Swipe to browse · Pinch to zoom · Double-tap to toggle
-      </motion.div>
+      {/* Hint text removed */}
 
       {/* Image counter */}
       {allImages.length > 1 && (
@@ -2106,17 +2077,17 @@ export const ClipsLayout = memo(function ClipsLayout() {
   const { projects: clips, loading } = useSanityProjects();
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("videoModalState", { detail: !!activeClip }));
+    window.dispatchEvent(new CustomEvent('videoModalState', { detail: !!activeClip }));
   }, [activeClip]);
 
-  if (loading) return null;
-
-  if (loading) return null;
+  const activeClips = useMemo(() => 
+    clips.filter((c: any) => c.playbackId && (c.displaySection === 'clip' || (!c.displaySection && (c.title.toLowerCase().includes('visual notes') || c.title.toLowerCase().includes('clip')))))
+  , [clips]);
 
   if (loading) return null;
 
   return (
-    <section id="work" className="py-24 md:py-40 bg-[#F5F2ED] px-6 md:px-12 lg:px-16 overflow-hidden relative z-10">
+    <section id="shorts" className="py-24 md:py-40 bg-[#F5F2ED] px-6 md:px-12 lg:px-16 overflow-hidden relative z-10">
       <div className="max-w-[1600px] mx-auto">
         <div className="mb-16 md:mb-24 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
           <div className="max-w-xl">
@@ -2131,7 +2102,7 @@ export const ClipsLayout = memo(function ClipsLayout() {
         <div 
           className="flex gap-5 md:gap-8 overflow-x-auto pb-8 pt-4 snap-x snap-mandatory -mx-6 px-6 md:-mx-12 md:px-12 lg:-mx-16 lg:px-16" 
         >
-          {clips.filter((c: any) => c.playbackId && (c.displaySection === 'clip' || (!c.displaySection && (c.title.toLowerCase().includes('visual notes') || c.title.toLowerCase().includes('clip'))))).map((clip: any) => (
+          {activeClips.map((clip: any) => (
             <ClipCard
               key={clip._id}
               clip={clip}
@@ -2141,11 +2112,12 @@ export const ClipsLayout = memo(function ClipsLayout() {
         </div>
       </div>
 
-      {typeof document !== "undefined" && createPortal(
+      {typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
           {activeClip && (
             <VerticalVideoPlayer
-              src={`https://stream.mux.com/${activeClip}.m3u8`}
+              clips={activeClips}
+              initialClipId={activeClip}
               onClose={() => setActiveClip(null)}
             />
           )}
@@ -2161,12 +2133,10 @@ const ClipCard = memo(function ClipCard({ clip, onOpen }: { clip: any; onOpen: (
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Detect touch-only devices
   useEffect(() => {
     setIsMobile(!window.matchMedia('(hover: hover)').matches);
   }, []);
 
-  // Play trigger: inView for mobile autoplay
   const { ref: playRef, inView } = useInView({
     threshold: 0.3,
     triggerOnce: false,
@@ -2201,7 +2171,6 @@ const ClipsPreview = memo(function ClipsPreview({ video, shouldPlay }: { video: 
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid) return;
-
     if (shouldPlay) {
       vid.play()?.catch(() => { });
     } else {
@@ -2210,7 +2179,6 @@ const ClipsPreview = memo(function ClipsPreview({ video, shouldPlay }: { video: 
     }
   }, [shouldPlay]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       videoRef.current?.pause();
@@ -2231,17 +2199,133 @@ const ClipsPreview = memo(function ClipsPreview({ video, shouldPlay }: { video: 
   );
 });
 
-const VerticalVideoPlayer = memo(function VerticalVideoPlayer({ src, onClose }: { src: string; onClose: () => void }) {
+const VerticalVideoItem = memo(function VerticalVideoItem({ src, onClose }: { src: string; onClose: () => void; }) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [showPlayFeedback, setShowPlayFeedback] = useState<"play" | "pause" | null>(null);
+  const [hlsInstance, setHlsInstance] = useState<any>(null);
+  const [qualityLevels, setQualityLevels] = useState<any[]>([]);
+  const [currentLevel, setCurrentLevel] = useState<number>(-1);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [videoAspect, setVideoAspect] = useState<number | null>(null);
   const videoRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const feedbackTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // --- Play / Pause ---
+  const triggerFeedback = useCallback((type: "play" | "pause") => {
+    if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
+    setShowPlayFeedback(type);
+    feedbackTimeout.current = setTimeout(() => setShowPlayFeedback(null), 600);
+  }, []);
+
+  const { ref: inViewRef, inView } = useInView({
+    threshold: 0.6,
+  });
+  const isHorizontal = isVideoLoaded && videoAspect && videoAspect > 1;
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    if (inView) {
+      video.play().catch(() => {});
+      setIsPlaying(true);
+    } else {
+      video.pause();
+      setIsPlaying(false);
+      // Only reset if it's completely out of view to avoid flickering
+      setTimeout(() => {
+        if (!inViewRef) {
+          video.currentTime = 0;
+          setProgress(0);
+        }
+      }, 500);
+    }
+  }, [inView]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && inView) {
+        e.preventDefault();
+        if (videoRef.current) {
+          if (videoRef.current.paused) {
+            videoRef.current.play().catch(() => {});
+            setIsPlaying(true);
+            triggerFeedback("play");
+          } else {
+            videoRef.current.pause();
+            setIsPlaying(false);
+            triggerFeedback("pause");
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [inView, triggerFeedback]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    video.addEventListener("play", onPlay);
+    video.addEventListener("pause", onPause);
+    return () => {
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("pause", onPause);
+    };
+  }, []);
+
+  const handleHlsReady = useCallback((hls: any) => {
+    setHlsInstance(hls);
+    setQualityLevels(hls.levels || []);
+    setCurrentLevel(hls.currentLevel);
+  }, []);
+
+  const changeQuality = (levelIndex: number) => {
+    if (hlsInstance) {
+      // Use nextLevel for a seamless switch (prevents instant buffering stall)
+      hlsInstance.nextLevel = levelIndex;
+      setCurrentLevel(levelIndex);
+      setShowSettings(false);
+
+      // Flush the buffer slightly ahead of current time to force the new 
+      // quality to appear quickly, rather than waiting for the entire 
+      // old low-quality buffer to play out.
+      if (videoRef.current) {
+        hlsInstance.trigger('hlsBufferFlushing', {
+          startOffset: videoRef.current.currentTime + 2,
+          endOffset: Number.POSITIVE_INFINITY
+        });
+      }
+    }
+  };
+
+  const toggleFullscreen = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!document.fullscreenElement) {
+      await containerRef.current?.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      await document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
   const togglePlay = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     const video = videoRef.current;
@@ -2258,30 +2342,11 @@ const VerticalVideoPlayer = memo(function VerticalVideoPlayer({ src, onClose }: 
     }
   }, []);
 
-  const triggerFeedback = useCallback((type: "play" | "pause") => {
-    if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
-    setShowPlayFeedback(type);
-    feedbackTimeout.current = setTimeout(() => setShowPlayFeedback(null), 600);
-  }, []);
 
-  // Cleanup feedback timeout on unmount
+
   useEffect(() => {
     return () => {
       if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current);
-    };
-  }, []);
-
-  // Keep isPlaying in sync with actual video state (e.g. ended, stalled)
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
-    video.addEventListener("play", onPlay);
-    video.addEventListener("pause", onPause);
-    return () => {
-      video.removeEventListener("play", onPlay);
-      video.removeEventListener("pause", onPause);
     };
   }, []);
 
@@ -2295,7 +2360,6 @@ const VerticalVideoPlayer = memo(function VerticalVideoPlayer({ src, onClose }: 
     }
   };
 
-  // --- Progress tracking ---
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -2310,7 +2374,6 @@ const VerticalVideoPlayer = memo(function VerticalVideoPlayer({ src, onClose }: 
     return () => video.removeEventListener("timeupdate", updateProgress);
   }, [isSeeking]);
 
-  // --- Seek helpers ---
   const seekToPosition = useCallback((clientX: number) => {
     const bar = progressBarRef.current;
     const video = videoRef.current;
@@ -2322,7 +2385,6 @@ const VerticalVideoPlayer = memo(function VerticalVideoPlayer({ src, onClose }: 
     setProgress(ratio * 100);
   }, []);
 
-  // --- Mouse seek (desktop) ---
   const handleProgressMouseDown = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -2345,14 +2407,13 @@ const VerticalVideoPlayer = memo(function VerticalVideoPlayer({ src, onClose }: 
     window.addEventListener("mouseup", onMouseUp);
   }, [seekToPosition]);
 
-  // --- Touch seek (mobile) ---
   const handleProgressTouchStart = useCallback((e: React.TouchEvent) => {
     e.stopPropagation();
     setIsSeeking(true);
     seekToPosition(e.touches[0].clientX);
 
     const onTouchMove = (ev: TouchEvent) => {
-      ev.preventDefault(); // prevent scroll while seeking
+      ev.preventDefault();
       seekToPosition(ev.touches[0].clientX);
     };
     const onTouchEnd = (ev: TouchEvent) => {
@@ -2368,121 +2429,240 @@ const VerticalVideoPlayer = memo(function VerticalVideoPlayer({ src, onClose }: 
   }, [seekToPosition]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-2xl px-6"
-      onClick={onClose}
+    <div
+      ref={(node) => {
+        inViewRef(node);
+        (containerRef as any).current = node;
+      }}
+      className="w-full h-full flex items-center justify-center relative bg-black"
     >
       <div
-        className="relative h-[85vh] aspect-[9/16] bg-[#111] rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] border border-white/10"
+        className={cn(
+          "relative bg-[#111] flex",
+          !isVideoLoaded ? "aspect-[9/16] h-[100dvh] md:h-[85vh] md:w-auto md:rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] border-0 md:border md:border-white/10" : "overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] md:border md:border-white/10 md:rounded-[2.5rem]"
+        )}
+        style={{
+          aspectRatio: isVideoLoaded && videoAspect ? videoAspect : undefined,
+          width: isVideoLoaded ? '100%' : undefined,
+          height: isVideoLoaded ? '100%' : undefined,
+          maxWidth: isVideoLoaded && videoAspect ? `calc(100dvh * ${videoAspect})` : undefined,
+          maxHeight: isVideoLoaded && videoAspect ? `calc(100vw / ${videoAspect})` : undefined,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <HlsVideo
           ref={videoRef}
           src={src}
-          autoPlay
+          autoPlay={inView}
           muted={isMuted}
           loop
           playsInline
-          className="w-full h-full object-cover"
+          onHlsReady={handleHlsReady}
+          onLoadedMetadata={(e) => {
+            const target = e.target as HTMLVideoElement;
+            if (target.videoWidth && target.videoHeight) {
+              setVideoAspect(target.videoWidth / target.videoHeight);
+              setIsVideoLoaded(true);
+            }
+          }}
+          className="w-full h-full object-contain"
+          poster={src.includes("mux.com") ? src.replace(".m3u8", "/thumbnail.jpg?time=0").replace("stream.mux.com", "image.mux.com") : undefined}
           onClick={togglePlay}
         />
 
-        {/* Top Controls */}
-        <div className="absolute top-8 left-8 right-8 flex justify-between items-center z-10">
+        {/* Top Bar (Close & Watermark) */}
+        <div className="absolute top-0 left-0 right-0 p-4 md:p-6 lg:p-8 flex justify-between items-start z-10 pointer-events-none">
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/40 transition-all cursor-pointer"
+            className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/40 transition-all cursor-pointer pointer-events-auto shrink-0"
           >
             <X size={20} />
           </button>
-          <div className="flex gap-3">
+          
+          <div className="opacity-80 mix-blend-screen drop-shadow-lg text-right pl-2">
+            <div className="text-xs md:text-base font-playfair font-semibold tracking-tight text-[#F8F5F0]">
+              D&C <span className="text-[6px] md:text-[10px] font-sans font-bold uppercase tracking-[0.3em] ml-0.5 md:ml-1 text-[#C5A059]">MediaHouse</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-12 right-4 md:right-8 flex flex-col gap-3 z-10 items-center">
+            <div className="relative flex flex-col items-end">
+              <AnimatePresence>
+                {showSettings && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    className="absolute bottom-12 right-0 mb-2 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden py-2 min-w-[100px] shadow-2xl z-50 flex flex-col"
+                  >
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); changeQuality(-1); }}
+                      className={cn("px-4 py-2 text-left text-xs hover:bg-white/10 transition-colors", currentLevel === -1 ? "text-[#C5A059] font-bold" : "text-white")}
+                    >
+                      Auto
+                    </button>
+                    {qualityLevels.map((level, idx) => (
+                      <button
+                        key={idx}
+                        onClick={(e) => { e.stopPropagation(); changeQuality(idx); }}
+                        className={cn("px-4 py-2 text-left text-xs hover:bg-white/10 transition-colors", currentLevel === idx ? "text-[#C5A059] font-bold" : "text-white")}
+                      >
+                        {level.height}p
+                      </button>
+                    )).reverse()}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); }}
+                className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/40 transition-all cursor-pointer"
+              >
+                <Settings size={18} />
+              </button>
+            </div>
+            
             <button
-              onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
+               onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }}
               className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/40 transition-all cursor-pointer"
             >
               {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
             </button>
+            
             <button
               onClick={handleShare}
               className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/40 transition-all cursor-pointer"
             >
               <Share2 size={18} />
             </button>
-          </div>
+
+            <button
+              onClick={toggleFullscreen}
+              className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md items-center justify-center text-white/70 hover:text-white hover:bg-black/40 transition-all cursor-pointer hidden md:flex"
+            >
+              {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+            </button>
         </div>
 
-        {/* Center Play/Pause Feedback (brief flash on tap) */}
         <AnimatePresence>
-          {showPlayFeedback && (
-            <motion.div
-              key={showPlayFeedback}
-              initial={{ opacity: 0.9, scale: 0.6 }}
-              animate={{ opacity: 0, scale: 1.3 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
-            >
-              <div className="w-20 h-20 rounded-full bg-white/15 backdrop-blur-xl flex items-center justify-center">
-                {showPlayFeedback === "pause" ? (
-                  <div className="flex gap-1.5">
-                    <div className="w-2.5 h-8 bg-white rounded-sm" />
-                    <div className="w-2.5 h-8 bg-white rounded-sm" />
-                  </div>
-                ) : (
-                  <Play size={36} fill="white" className="text-white ml-1.5" />
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Persistent pause overlay (stays until user resumes) */}
-        <AnimatePresence>
-          {!isPlaying && !showPlayFeedback && (
+          {!isPlaying && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none"
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
             >
-              <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center">
                 <Play size={40} fill="white" className="text-white ml-2" />
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Bottom Seekable Progress Bar */}
         <div
           ref={progressBarRef}
           className="absolute bottom-0 left-0 right-0 z-30 cursor-pointer group/progress"
           onMouseDown={handleProgressMouseDown}
           onTouchStart={handleProgressTouchStart}
         >
-          {/* Enlarged touch/click target area */}
           <div className="h-8 flex items-end">
-            {/* Track container — no overflow-hidden so the handle can stick out */}
             <div className="w-full h-1.5 group-hover/progress:h-3 transition-all duration-200 relative">
-              {/* Track background */}
               <div className="absolute inset-0 bg-white/10 rounded-t-sm" />
-              {/* Fill bar */}
               <div
                 className="h-full bg-[#C5A059] rounded-t-sm relative"
                 style={{ width: `${progress}%` }}
               >
-                {/* Seek handle (visible on hover / during drag) */}
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-4 h-4 bg-[#C5A059] rounded-full shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity duration-200 border-2 border-white z-10" />
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+});
+
+const VerticalVideoPlayer = memo(function VerticalVideoPlayer({ clips, initialClipId, onClose }: { clips: any[]; initialClipId: string; onClose: () => void; }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!containerRef.current) return;
+        
+        const container = containerRef.current;
+        const children = Array.from(container.children);
+        if (children.length === 0) return;
+        
+        const scrollTop = container.scrollTop;
+        const height = container.clientHeight;
+        const currentIndex = Math.round(scrollTop / height);
+        
+        if (e.key === 'ArrowDown' && currentIndex < children.length - 1) {
+          children[currentIndex + 1].scrollIntoView({ behavior: 'smooth' });
+        } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+          children[currentIndex - 1].scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = "hidden";
+    
+    setTimeout(() => {
+      if (containerRef.current && initialClipId) {
+        const el = containerRef.current.querySelector(`[data-clip-id="${initialClipId}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'instant' });
+        }
+      }
+    }, 50);
+
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, [initialClipId]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] bg-black backdrop-blur-2xl"
+      onClick={onClose}
+    >
+      <div 
+        ref={containerRef}
+        className="w-full h-[100dvh] overflow-y-scroll snap-y snap-mandatory scrollbar-none"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <style dangerouslySetInnerHTML={{ __html: `
+          .scrollbar-none::-webkit-scrollbar { display: none; }
+        `}} />
+        {clips.map((clip: any) => (
+          <div 
+            key={clip.playbackId} 
+            data-clip-id={clip.playbackId}
+            className="w-full h-[100dvh] snap-start snap-always"
+          >
+            <VerticalVideoItem 
+              src={`https://stream.mux.com/${clip.playbackId}.m3u8`} 
+              onClose={onClose} 
+            />
+          </div>
+        ))}
+      </div>
     </motion.div>
   );
 });
+
 
 export function AboutSection() {
   const [isModalOpen, setIsModalOpen] = useState(false);
