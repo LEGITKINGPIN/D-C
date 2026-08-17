@@ -1,3 +1,4 @@
+"use client";
 import { motion, AnimatePresence } from "motion/react";
 import React, { useState, useEffect, useRef, useCallback, forwardRef, memo, useMemo, useImperativeHandle } from "react";
 import { createPortal } from "react-dom";
@@ -8,6 +9,8 @@ import { siteConfig } from "../data";
 import { useInView } from "react-intersection-observer";
 import MuxPlayer from "@mux/mux-player-react";
 import { useSanityProjects } from "../hooks/useSanityProjects";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 
 
 // ---------------------------------------------------------------------------
@@ -246,7 +249,10 @@ export function useIdleTimer(timeoutMs = 10000) {
 
 
 // --- Navbar ---
-export function Navbar({ activeView = "home", setActiveView }: { activeView?: string; setActiveView?: (v: string) => void }) {
+export function Navbar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const activeView = pathname === "/about" ? "about" : "home";
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isIdle = useIdleTimer(10000);
@@ -1520,7 +1526,7 @@ export const Gallery = memo(function Gallery() {
 
 
 // --- Contact & Footer ---
-export function Contact({ setActiveView }: { setActiveView?: (v: string) => void }) {
+export function Contact() {
   const [submitted, setSubmitted] = useState(false);
 
   return (
