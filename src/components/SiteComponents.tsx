@@ -1374,7 +1374,8 @@ const GalleryLightbox = memo(function GalleryLightbox({
                 type: "spring",
                 stiffness: 300,
                 damping: 30,
-                mass: 0.8
+                mass: 0.8,
+                ...(zoom > 1 && isCenter ? { x: { duration: 0 }, y: { duration: 0 } } : {})
               }}
               className="absolute inline-flex items-center justify-center max-w-full max-h-full cursor-pointer select-none"
               style={{
