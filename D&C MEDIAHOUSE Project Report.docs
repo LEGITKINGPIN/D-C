@@ -12,9 +12,18 @@
 - **GitHub:** [LEGITKINGPIN](https://github.com/LEGITKINGPIN)
 - **LinkedIn:** [Meet Sharma](https://www.linkedin.com/in/meet-sharma-m16042005)
 
-## 2. Architecture & Tech Stack
+## 2. Technologies Used & Architecture
 
-The project follows a decoupled, headless architecture comprising a modern React frontend and a Sanity-powered backend CMS.
+### Core Technologies
+- **Frontend Framework:** Next.js 15 (App Router), React 19
+- **Styling:** Tailwind CSS (v4)
+- **Content Management System (CMS):** Sanity Studio (Headless CMS)
+- **Video Infrastructure & Streaming:** Mux (Adaptive HLS Streaming)
+- **Animations & UI:** Framer Motion (`motion/react`), Embla Carousel, Lucide React
+- **Languages:** TypeScript, JavaScript
+- **Deployment & Hosting:** Vercel
+
+The project follows a decoupled, headless architecture comprising a modern Next.js frontend and a Sanity-powered backend CMS.
 
 ### 2.1. Frontend App (`dc-mediahouse-next/` & `D&C/`)
 The frontend focuses on high performance and cinematic aesthetics. The project was originally built in Vite (React 19) and has since been migrated to Next.js for enhanced capabilities.
