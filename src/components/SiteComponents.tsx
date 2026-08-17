@@ -843,6 +843,14 @@ const FilmSlide = memo(function FilmSlide({
   onPlayReel: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoReady, setVideoReady] = useState(false);
+
+  const posterUrl = useMemo(() => {
+    if (item.playbackId) {
+      return `https://image.mux.com/${item.playbackId}/thumbnail.webp?time=0`;
+    }
+    return item.thumbnail || item.poster || "";
+  }, [item]);
 
   // Attempt play whenever globalPaused changes or component mounts
   useEffect(() => {
@@ -859,6 +867,7 @@ const FilmSlide = memo(function FilmSlide({
   // When HLS finishes loading & the video has enough data, kick-start playback
   const handleCanPlay = useCallback(() => {
     const video = videoRef.current;
+    setVideoReady(true);
     if (video && !isGlobalPaused) {
       video.play().catch(() => { });
     }
@@ -873,11 +882,27 @@ const FilmSlide = memo(function FilmSlide({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ duration: 0.9, ease: smoothEase }}
-      className="absolute inset-0"
+      className="absolute inset-0 bg-[#2D2926]"
     >
+      {/* Instant high-res poster thumbnail so card is never blank/gray */}
+      {posterUrl && (
+        <img
+          src={posterUrl}
+          alt=""
+          aria-hidden="true"
+          className={cn(
+            "absolute inset-0 w-full h-full object-cover transition-opacity duration-700 will-change-transform text-transparent",
+            videoReady ? "opacity-0 pointer-events-none" : "opacity-100"
+          )}
+          loading="eager"
+          decoding="async"
+        />
+      )}
+
       <HlsVideo
         ref={videoRef}
         src={item.playbackId ? `https://stream.mux.com/${item.playbackId}.m3u8` : item.video}
+        poster={posterUrl}
         autoPlay
         loop
         muted
@@ -885,7 +910,10 @@ const FilmSlide = memo(function FilmSlide({
         preload="auto"
         onCanPlay={handleCanPlay}
         onLoadedData={handleCanPlay}
-        className="w-full h-full object-cover will-change-transform"
+        className={cn(
+          "w-full h-full object-cover will-change-transform transition-opacity duration-700",
+          videoReady ? "opacity-100" : "opacity-0"
+        )}
         onContextMenu={(e) => e.preventDefault()}
         controlsList="nodownload"
       />
@@ -915,7 +943,7 @@ const FilmSlide = memo(function FilmSlide({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.6, delay: 0.6, ease: slideEase }}
-            className="w-fit px-8 md:px-12 py-4 md:py-5 bg-[#C5A059] text-white text-[10px] uppercase tracking-[0.4em] font-bold hover:bg-[#A68546] transition-all duration-500"
+            className="w-fit px-8 md:px-12 py-4 md:py-5 bg-[#C5A059] text-white text-[10px] uppercase tracking-[0.4em] font-bold hover:bg-[#A68546] transition-all duration-500 cursor-pointer"
           >
             Play Reel
           </motion.button>
@@ -930,7 +958,25 @@ export function FeaturedCarousel() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   
   const { projects, loading } = useSanityProjects();
-  const items = useMemo(() => projects.filter(item => item.displaySection === 'directorCut' || (!item.displaySection && item.title.toLowerCase().includes('director'))), [projects]);
+  const items = useMemo(() => {
+    const sanityItems = projects.filter(item => item.displaySection === 'directorCut' || (!item.displaySection && item.title.toLowerCase().includes('director')));
+    if (sanityItems.length > 0) return sanityItems;
+    return siteConfig.portfolio.filter((p: any) => p.isDirectorCut);
+  }, [projects]);
+
+  // Preload all slide poster images so slide transitions are instantaneous
+  useEffect(() => {
+    if (!items || items.length === 0) return;
+    items.forEach((it) => {
+      const url = it.playbackId
+        ? `https://image.mux.com/${it.playbackId}/thumbnail.webp?time=0`
+        : (it.thumbnail || it.poster);
+      if (url) {
+        const img = new Image();
+        img.src = url;
+      }
+    });
+  }, [items]);
 
   const isGlobalPaused = useGlobalPauseState();
 

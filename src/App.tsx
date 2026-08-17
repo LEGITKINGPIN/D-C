@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
+import { AnimatePresence } from "motion/react";
 import { Navbar, Hero, BrandStrip, FeaturedCarousel, ClipsLayout, Gallery, Contact, AboutSection } from "./components/SiteComponents";
+import { LoadingScreen } from "./components/LoadingScreen";
 
 export default function App() {
+  const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState(() => {
     return window.location.hash === "#about" ? "about" : "home";
   });
@@ -26,6 +29,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-orange-500 selection:text-white">
+      <AnimatePresence mode="wait">
+        {isLoading && (
+          <LoadingScreen onComplete={() => setIsLoading(false)} />
+        )}
+      </AnimatePresence>
+
       <Navbar activeView={activeView} setActiveView={setActiveView} />
       
       <main>
