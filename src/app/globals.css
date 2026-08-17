@@ -12,10 +12,10 @@
 }
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Cormorant Garamond", serif;
+  --font-sans: var(--font-inter-next), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-cormorant-next), serif;
   --font-montserrat: "Montserrat", sans-serif;
-  --font-playfair: "Playfair Display", serif;
+  --font-playfair: var(--font-playfair-next), serif;
   --font-chineserocks: "Chinese Rocks", sans-serif;
 }
 

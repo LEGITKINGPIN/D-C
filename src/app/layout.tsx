@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { Navbar, Contact } from "../components/SiteComponents";
+import { ClientLoadingScreen } from "../components/ClientLoadingScreen";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", display: "swap" });
-const cormorant = Cormorant_Garamond({ subsets: ["latin"], variable: "--font-cormorant", display: "swap" });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter-next", display: "swap" });
+const playfair = Playfair_Display({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-playfair-next", display: "swap" });
+const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", "600", "700"], style: ["normal", "italic"], variable: "--font-cormorant-next", display: "swap" });
 
 export const metadata: Metadata = {
   title: "D&C MediaHouse | Cinematic Videography Portfolio",
@@ -36,9 +37,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${cormorant.variable}`}>
       <body className="min-h-screen bg-black text-white selection:bg-orange-500 selection:text-white font-sans">
-        <Navbar />
-        <main>{children}</main>
-        <Contact />
+        <ClientLoadingScreen>
+          <Navbar />
+          <main>{children}</main>
+          <Contact />
+        </ClientLoadingScreen>
       </body>
     </html>
   );
