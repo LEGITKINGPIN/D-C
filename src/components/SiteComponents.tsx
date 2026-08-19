@@ -10,6 +10,8 @@ import { siteConfig } from "../data";
 import { useInView } from "react-intersection-observer";
 import MuxPlayer from "@mux/mux-player-react";
 import { useSanityProjects } from "../hooks/useSanityProjects";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 
 // ---------------------------------------------------------------------------
@@ -248,7 +250,8 @@ export function useIdleTimer(timeoutMs = 10000) {
 
 
 // --- Navbar ---
-export function Navbar({ activeView = "home", setActiveView }: { activeView?: string; setActiveView?: (v: string) => void }) {
+export function Navbar() {
+  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isIdle = useIdleTimer(10000);
@@ -274,54 +277,36 @@ export function Navbar({ activeView = "home", setActiveView }: { activeView?: st
     <>
       <nav className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-6 md:px-12 py-4 md:py-6 flex justify-between items-center",
-        (isScrolled || activeView === "about")
+        (isScrolled || pathname === "/about")
           ? "bg-black/90 backdrop-blur-xl shadow-lg py-3 md:py-4"
           : "bg-transparent",
-        (isIdle && !isScrolled && activeView === "home") ? "opacity-0 pointer-events-none" : "opacity-100"
+        (isIdle && !isScrolled && pathname === "/") ? "opacity-0 pointer-events-none" : "opacity-100"
       )}>
         {/* Logo */}
-        <div 
-          className="relative group cursor-pointer"
-          onClick={() => {
-            setActiveView?.("home");
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-        >
+        <Link href="/" className="relative group cursor-pointer block">
           <div className="text-xl md:text-2xl font-playfair font-semibold tracking-tight text-[#F8F5F0] drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
             D&C <span className="text-xs md:text-sm font-sans font-bold uppercase tracking-[0.3em] ml-1 text-[#C5A059]">MediaHouse</span>
           </div>
-        </div>
+        </Link>
 
         {/* Desktop Nav */}
         <div className="hidden md:flex gap-10 items-center">
-          {navItems.map((item) => (
-            <a
-              key={item}
-              href={`#${item.toLowerCase()}`}
-              onClick={(e) => {
-                if (item === "About") {
-                  e.preventDefault();
-                  setActiveView?.("about");
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                } else {
-                  if (activeView === "about") {
-                    e.preventDefault();
-                    setActiveView?.("home");
-                    setTimeout(() => {
-                      document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: "smooth" });
-                    }, 100);
-                  }
-                }
-              }}
-              className={cn(
-                "text-[11px] font-inter font-medium uppercase tracking-[2px] hover:text-[#C5A059] transition-all duration-300 relative group py-2 drop-shadow-[0_1px_4px_rgba(0,0,0,0.3)]",
-                (activeView === "about" && item === "About") ? "text-[#C5A059]" : "text-[#F8F5F0]/70"
-              )}
-            >
-              {item}
-              <span className="absolute bottom-0 left-0 h-[1px] bg-[#C5A059] transition-all duration-300 group-hover:w-full w-0" />
-            </a>
-          ))}
+          {navItems.map((item) => {
+            const href = item === "About" ? "/about" : `/#${item.toLowerCase()}`;
+            return (
+              <Link
+                key={item}
+                href={href}
+                className={cn(
+                  "text-[11px] font-inter font-medium uppercase tracking-[2px] hover:text-[#C5A059] transition-all duration-300 relative group py-2 drop-shadow-[0_1px_4px_rgba(0,0,0,0.3)]",
+                  (pathname === "/about" && item === "About") ? "text-[#C5A059]" : "text-[#F8F5F0]/70"
+                )}
+              >
+                {item}
+                <span className="absolute bottom-0 left-0 h-[1px] bg-[#C5A059] transition-all duration-300 group-hover:w-full w-0" />
+              </Link>
+            );
+          })}
         </div>
 
         {/* Mobile Toggle */}
@@ -357,34 +342,25 @@ export function Navbar({ activeView = "home", setActiveView }: { activeView?: st
             </div>
 
             <div className="flex flex-col gap-8">
-              {navItems.map((item, idx) => (
-                <motion.a
-                  key={item}
-                  href={`#${item.toLowerCase()}`}
-                  onClick={(e) => {
-                    setIsMenuOpen(false);
-                    if (item === "About") {
-                      e.preventDefault();
-                      setActiveView?.("about");
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    } else {
-                      if (activeView === "about") {
-                        e.preventDefault();
-                        setActiveView?.("home");
-                        setTimeout(() => {
-                          document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: "smooth" });
-                        }, 100);
-                      }
-                    }
-                  }}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 + idx * 0.1 }}
-                  className="text-3xl font-playfair font-medium text-[#1C1C1C] hover:text-[#C2A36B] transition-colors"
-                >
-                  {item}
-                </motion.a>
-              ))}
+              {navItems.map((item, idx) => {
+                const href = item === "About" ? "/about" : `/#${item.toLowerCase()}`;
+                return (
+                  <motion.div
+                    key={item}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + idx * 0.1 }}
+                  >
+                    <Link
+                      href={href}
+                      onClick={() => setIsMenuOpen(false)}
+                      className="text-3xl font-playfair font-medium text-[#1C1C1C] hover:text-[#C2A36B] transition-colors"
+                    >
+                      {item}
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </div>
 
             <div className="mt-auto pt-12 border-t border-[#1C1C1C]/10">
