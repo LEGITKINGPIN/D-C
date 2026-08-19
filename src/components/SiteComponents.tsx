@@ -11,6 +11,7 @@ import MuxPlayer from "@mux/mux-player-react";
 import { useSanityProjects } from "../hooks/useSanityProjects";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 
 
 // ---------------------------------------------------------------------------
@@ -468,20 +469,31 @@ export function Hero() {
   return (
     <section id="hero" className="relative h-screen w-full overflow-hidden flex flex-col items-center justify-center bg-[#2D2926]">
       {heroSrc && (
-        <HlsVideo
-          key={heroSrc}
-          ref={videoRef}
-          src={heroSrc}
-          poster={heroPoster}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="metadata"
-          className="absolute inset-0 w-full h-full object-cover will-change-transform"
-          onContextMenu={(e) => e.preventDefault()}
-          controlsList="nodownload"
-        />
+        <>
+          {heroProject?.playbackId && (
+            <Image
+              src={`https://image.mux.com/${heroProject.playbackId}/thumbnail.webp?time=1`}
+              alt="Hero poster"
+              fill
+              priority
+              className="object-cover"
+            />
+          )}
+          <HlsVideo
+            key={heroSrc}
+            ref={videoRef}
+            src={heroSrc}
+            poster={heroPoster}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 w-full h-full object-cover will-change-transform"
+            onContextMenu={(e) => e.preventDefault()}
+            controlsList="nodownload"
+          />
+        </>
       )}
 
       <div className={cn(
@@ -945,6 +957,8 @@ const FilmSlide = memo(function FilmSlide({
 export function FeaturedCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
   
   const { projects, loading } = useSanityProjects();
   const items = useMemo(() => {
@@ -985,7 +999,7 @@ export function FeaturedCarousel() {
 
   return (
     <section id="films" className="py-32 bg-white overflow-hidden border-y border-[#2D2926]/5">
-      <div className="max-w-7xl mx-auto px-8">
+      <div className="max-w-7xl mx-auto px-6 md:px-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8">
           <div>
             <h2 className="text-[#7A6128] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Featured Films</h2>
@@ -1016,7 +1030,19 @@ export function FeaturedCarousel() {
             <ChevronLeft size={24} />
           </button>
 
-          <div className="relative aspect-[4/5] md:aspect-video w-full overflow-hidden bg-transparent border border-[#2D2926]/5 rounded-2xl md:rounded-[3rem]">
+          <div 
+            className="relative aspect-[4/5] md:aspect-video w-full overflow-hidden bg-transparent border border-[#2D2926]/5 rounded-2xl md:rounded-[3rem] touch-pan-y"
+            onTouchStart={(e) => setTouchStart(e.targetTouches[0].clientX)}
+            onTouchMove={(e) => setTouchEnd(e.targetTouches[0].clientX)}
+            onTouchEnd={() => {
+              if (!touchStart || !touchEnd) return;
+              const distance = touchStart - touchEnd;
+              if (distance > 50) setCurrentIndex((prev) => (prev + 1) % items.length);
+              if (distance < -50) setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
+              setTouchStart(0);
+              setTouchEnd(0);
+            }}
+          >
             <AnimatePresence initial={false}>
               <FilmSlide
                 key={currentIndex}
@@ -1075,7 +1101,7 @@ const GalleryCard = memo(function GalleryCard({ img, label, onClick }: { img: st
         decoding="async"
         width={800}
         height={520}
-        className="w-full h-full object-cover transition-transform duration-700 will-change-transform group-hover:scale-110"
+        className="block w-full h-full object-cover transition-transform duration-700 will-change-transform scale-100 transform-gpu backface-hidden group-hover:scale-110"
       />
       <div className="absolute inset-0 rounded-2xl md:rounded-3xl border-2 border-transparent group-hover:border-[#C5A059]/30 transition-all duration-500" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -1802,7 +1828,7 @@ export const ClipsLayout = memo(function ClipsLayout() {
   if (loading) return null;
 
   return (
-    <section id="shorts" className="py-24 md:py-40 bg-[#F5F2ED] px-6 md:px-12 lg:px-16 overflow-hidden relative z-10">
+    <section id="work" className="py-24 md:py-40 bg-[#F5F2ED] px-6 md:px-12 lg:px-16 overflow-hidden relative z-10">
       <div className="max-w-[1600px] mx-auto">
         <div className="mb-16 md:mb-24 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
           <div className="max-w-xl">
