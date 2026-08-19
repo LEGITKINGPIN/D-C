@@ -1,4 +1,3 @@
-"use client";
 import { motion, AnimatePresence } from "motion/react";
 import React, { useState, useEffect, useRef, useCallback, forwardRef, memo, useMemo, useImperativeHandle } from "react";
 import { createPortal } from "react-dom";
@@ -9,9 +8,6 @@ import { siteConfig } from "../data";
 import { useInView } from "react-intersection-observer";
 import MuxPlayer from "@mux/mux-player-react";
 import { useSanityProjects } from "../hooks/useSanityProjects";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import Image from "next/image";
 
 
 // ---------------------------------------------------------------------------
@@ -250,10 +246,7 @@ export function useIdleTimer(timeoutMs = 10000) {
 
 
 // --- Navbar ---
-export function Navbar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const activeView = pathname === "/about" ? "about" : "home";
+export function Navbar({ activeView = "home", setActiveView }: { activeView?: string; setActiveView?: (v: string) => void }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isIdle = useIdleTimer(10000);
@@ -285,36 +278,48 @@ export function Navbar() {
         (isIdle && !isScrolled && activeView === "home") ? "opacity-0 pointer-events-none" : "opacity-100"
       )}>
         {/* Logo */}
-        <Link 
-          href="/"
+        <div 
           className="relative group cursor-pointer"
           onClick={() => {
-            setIsMenuOpen(false);
+            setActiveView?.("home");
+            window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         >
           <div className="text-xl md:text-2xl font-playfair font-semibold tracking-tight text-[#F8F5F0] drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
             D&C <span className="text-xs md:text-sm font-sans font-bold uppercase tracking-[0.3em] ml-1 text-[#C5A059]">MediaHouse</span>
           </div>
-        </Link>
+        </div>
 
         {/* Desktop Nav */}
         <div className="hidden md:flex gap-10 items-center">
-          {navItems.map((item) => {
-            const isAbout = item === "About";
-            const href = isAbout ? "/about" : `/#${item.toLowerCase()}`;
-            return (
-            <Link
+          {navItems.map((item) => (
+            <a
               key={item}
-              href={href}
+              href={`#${item.toLowerCase()}`}
+              onClick={(e) => {
+                if (item === "About") {
+                  e.preventDefault();
+                  setActiveView?.("about");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                } else {
+                  if (activeView === "about") {
+                    e.preventDefault();
+                    setActiveView?.("home");
+                    setTimeout(() => {
+                      document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: "smooth" });
+                    }, 100);
+                  }
+                }
+              }}
               className={cn(
                 "text-[11px] font-inter font-medium uppercase tracking-[2px] hover:text-[#C5A059] transition-all duration-300 relative group py-2 drop-shadow-[0_1px_4px_rgba(0,0,0,0.3)]",
-                (activeView === "about" && isAbout) ? "text-[#C5A059]" : "text-[#F8F5F0]/70"
+                (activeView === "about" && item === "About") ? "text-[#C5A059]" : "text-[#F8F5F0]/70"
               )}
             >
               {item}
               <span className="absolute bottom-0 left-0 h-[1px] bg-[#C5A059] transition-all duration-300 group-hover:w-full w-0" />
-            </Link>
-          )})}
+            </a>
+          ))}
         </div>
 
         {/* Mobile Toggle */}
@@ -350,25 +355,34 @@ export function Navbar() {
             </div>
 
             <div className="flex flex-col gap-8">
-              {navItems.map((item, idx) => {
-                const isAbout = item === "About";
-                const href = isAbout ? "/about" : `/#${item.toLowerCase()}`;
-                return (
-                <motion.div
+              {navItems.map((item, idx) => (
+                <motion.a
                   key={item}
+                  href={`#${item.toLowerCase()}`}
+                  onClick={(e) => {
+                    setIsMenuOpen(false);
+                    if (item === "About") {
+                      e.preventDefault();
+                      setActiveView?.("about");
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    } else {
+                      if (activeView === "about") {
+                        e.preventDefault();
+                        setActiveView?.("home");
+                        setTimeout(() => {
+                          document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: "smooth" });
+                        }, 100);
+                      }
+                    }
+                  }}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 + idx * 0.1 }}
+                  className="text-3xl font-playfair font-medium text-[#1C1C1C] hover:text-[#C2A36B] transition-colors"
                 >
-                  <Link
-                    href={href}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="text-3xl font-playfair font-medium text-[#1C1C1C] hover:text-[#C2A36B] transition-colors"
-                  >
-                    {item}
-                  </Link>
-                </motion.div>
-              )})}
+                  {item}
+                </motion.a>
+              ))}
             </div>
 
             <div className="mt-auto pt-12 border-t border-[#1C1C1C]/10">
@@ -469,31 +483,20 @@ export function Hero() {
   return (
     <section id="hero" className="relative h-screen w-full overflow-hidden flex flex-col items-center justify-center bg-[#2D2926]">
       {heroSrc && (
-        <>
-          {heroProject?.playbackId && (
-            <Image
-              src={`https://image.mux.com/${heroProject.playbackId}/thumbnail.webp?time=1`}
-              alt="Hero poster"
-              fill
-              priority
-              className="object-cover"
-            />
-          )}
-          <HlsVideo
-            key={heroSrc}
-            ref={videoRef}
-            src={heroSrc}
-            poster={heroPoster}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
-            className="absolute inset-0 w-full h-full object-cover will-change-transform"
-            onContextMenu={(e) => e.preventDefault()}
-            controlsList="nodownload"
-          />
-        </>
+        <HlsVideo
+          key={heroSrc}
+          ref={videoRef}
+          src={heroSrc}
+          poster={heroPoster}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+          className="absolute inset-0 w-full h-full object-cover will-change-transform"
+          onContextMenu={(e) => e.preventDefault()}
+          controlsList="nodownload"
+        />
       )}
 
       <div className={cn(
@@ -957,8 +960,6 @@ const FilmSlide = memo(function FilmSlide({
 export function FeaturedCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-  const [touchStart, setTouchStart] = useState(0);
-  const [touchEnd, setTouchEnd] = useState(0);
   
   const { projects, loading } = useSanityProjects();
   const items = useMemo(() => {
@@ -999,7 +1000,7 @@ export function FeaturedCarousel() {
 
   return (
     <section id="films" className="py-32 bg-white overflow-hidden border-y border-[#2D2926]/5">
-      <div className="max-w-7xl mx-auto px-6 md:px-8">
+      <div className="max-w-7xl mx-auto px-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8">
           <div>
             <h2 className="text-[#7A6128] text-[10px] uppercase tracking-[0.6em] font-bold mb-6">Featured Films</h2>
@@ -1030,19 +1031,7 @@ export function FeaturedCarousel() {
             <ChevronLeft size={24} />
           </button>
 
-          <div 
-            className="relative aspect-[4/5] md:aspect-video w-full overflow-hidden bg-transparent border border-[#2D2926]/5 rounded-2xl md:rounded-[3rem] touch-pan-y"
-            onTouchStart={(e) => setTouchStart(e.targetTouches[0].clientX)}
-            onTouchMove={(e) => setTouchEnd(e.targetTouches[0].clientX)}
-            onTouchEnd={() => {
-              if (!touchStart || !touchEnd) return;
-              const distance = touchStart - touchEnd;
-              if (distance > 50) setCurrentIndex((prev) => (prev + 1) % items.length);
-              if (distance < -50) setCurrentIndex((prev) => (prev - 1 + items.length) % items.length);
-              setTouchStart(0);
-              setTouchEnd(0);
-            }}
-          >
+          <div className="relative aspect-[4/5] md:aspect-video w-full overflow-hidden bg-transparent border border-[#2D2926]/5 rounded-2xl md:rounded-[3rem]">
             <AnimatePresence initial={false}>
               <FilmSlide
                 key={currentIndex}
@@ -1101,7 +1090,7 @@ const GalleryCard = memo(function GalleryCard({ img, label, onClick }: { img: st
         decoding="async"
         width={800}
         height={520}
-        className="block w-full h-full object-cover transition-transform duration-700 will-change-transform scale-100 transform-gpu backface-hidden group-hover:scale-110"
+        className="w-full h-full object-cover transition-transform duration-700 will-change-transform group-hover:scale-110"
       />
       <div className="absolute inset-0 rounded-2xl md:rounded-3xl border-2 border-transparent group-hover:border-[#C5A059]/30 transition-all duration-500" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -1531,7 +1520,7 @@ export const Gallery = memo(function Gallery() {
 
 
 // --- Contact & Footer ---
-export function Contact() {
+export function Contact({ setActiveView }: { setActiveView?: (v: string) => void }) {
   const [submitted, setSubmitted] = useState(false);
 
   return (
