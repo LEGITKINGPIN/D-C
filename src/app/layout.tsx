@@ -15,7 +15,14 @@ export const metadata: Metadata = {
     template: "%s | D&C MediaHouse",
   },
   description: "D&C MediaHouse is a premier video production agency specializing in event coverage, brand films, commercials, and cinematic storytelling.",
-  keywords: ["cinematic video production", "event cinematography", "commercial filmmaker", "brand story videos", "fashion videos", "Saksham Chaudhary", "D&C MediaHouse", "premium video agency", "New Delhi video production"],
+  keywords: [
+    "cinematic video production", "event cinematography", "commercial filmmaker", 
+    "brand story videos", "fashion videos", "Saksham Chaudhary", 
+    "D&C MediaHouse", "premium video agency", "New Delhi video production",
+    "dcm", "dncm", "dnc mediahouse", "dcmediahouse", "dnc media house", 
+    "d & c mediahouse", "d and c mediahouse", "dc media house", "dc media", 
+    "d&c media house", "dncmediahouse", "dcmedia"
+  ],
   authors: [{ name: "Saksham Chaudhary", url: "https://dcmediahouse.in" }],
   creator: "Saksham Chaudhary",
   alternates: {
