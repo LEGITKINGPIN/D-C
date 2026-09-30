@@ -126,7 +126,7 @@ export const siteConfig = {
     cta: "Let's Create Something Cinematic",
     email: "dcmediahouse.saksham@gmail.com",
     whatsapp: "https://wa.me/8130981018",
-    instagram: "https://www.instagram.com/d.c_mediahouse",
+    instagram: "https://www.instagram.com/dcmediahouse.in/#",
   },
   brands: [
     { name: "Lakme", logo: "brands/Lakme.webp" },

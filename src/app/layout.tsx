@@ -84,7 +84,7 @@ const jsonLd = {
     "longitude": "77.2090"
   },
   "sameAs": [
-    "https://www.instagram.com/dcmediahouse"
+    "https://www.instagram.com/dcmediahouse.in/#"
   ]
 };
 
