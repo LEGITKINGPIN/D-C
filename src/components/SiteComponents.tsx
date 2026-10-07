@@ -1725,17 +1725,12 @@ export function Contact({ setActiveView }: { setActiveView?: (v: string) => void
                 <h4 className="text-[11px] md:text-xs uppercase tracking-[0.4em] font-bold text-[#2D2926]/70 mb-5 md:mb-6">Connect</h4>
                 <ul className="space-y-3.5">
                   <li>
-                    <a 
-                      href="#about" 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setActiveView?.("about");
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
+                    <Link 
+                      href="/about" 
                       className="text-[#2D2926]/75 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300"
                     >
                       About Us
-                    </a>
+                    </Link>
                   </li>
                   <li>
                     <a href="#contact" className="text-[#2D2926]/75 text-[15px] md:text-base hover:text-[#C5A059] transition-colors duration-300">Contact Us</a>
